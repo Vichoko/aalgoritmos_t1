@@ -24,6 +24,8 @@ enum EDistribution{
 public class SegmentGenerator {
     static final int YMAX = 100;
     static final int XMAX = 100;
+	static final double normalMean = XMAX/2;
+	static final double normalDesv = XMAX/7;
 
     int n;
     EDistribution distr;
@@ -41,7 +43,7 @@ public class SegmentGenerator {
         SegmentDispatcher dispatcher = new SegmentDispatcher(Long.toString(System.currentTimeMillis()) + ".txt");
         IRandom uniformXRand = new UniformRandom(XMAX);
         IRandom uniformYRand = new UniformRandom(YMAX);
-        IRandom normalRand = new NormalRandom(XMAX/2, XMAX/7);
+        IRandom normalRand = new NormalRandom(normalMean, normalDesv);
         double x1, y1, x2, y2;
 
         if (distr == EDistribution.UNIFORM){
