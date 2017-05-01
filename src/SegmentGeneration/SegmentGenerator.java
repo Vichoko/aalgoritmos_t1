@@ -35,30 +35,49 @@ public class SegmentGenerator {
 
     protected void GenerateSegments(){
         SegmentDispatcher dispatcher = new SegmentDispatcher(Long.toString(System.currentTimeMillis()));
+        Random uniRand = new Random();
+        NormalRandom normalRand = new NormalRandom(XMAX/2, XMAX/7);
+
+        double x1, y1, x2, y2;
+
+
         if (distr == EDistribution.UNIFORM){
             // Generar N segmentos con distribucion de coordenadas uniformes. Balance dependiendo de a.
-            Random rand = new Random();
-            double x1, y1, x2, y2;
-
             //Genero los verticales
             for (int i = 0; i < a*n ; i++){
-                x1 = rand.nextDouble()*XMAX;
-                y1 = rand.nextDouble()*YMAX;
+                x1 = uniRand.nextDouble()*XMAX;
+                y1 = uniRand.nextDouble()*YMAX;
                 x2 = x1;
-                y2 = rand.nextDouble()*YMAX;
+                y2 = uniRand.nextDouble()*YMAX;
                 dispatcher.sendSegment(x1,y1,x2,y2);
             }
             // Generar Horizontales
             for (int i = 0; i < (a-1)*n; i++){
-                x1 = rand.nextDouble()*XMAX;
-                y1 = rand.nextDouble()*YMAX;
-                x2 = rand.nextDouble()*YMAX;
+                x1 = uniRand.nextDouble()*XMAX;
+                y1 = uniRand.nextDouble()*YMAX;
+                x2 = uniRand.nextDouble()*YMAX;
                 y2 = y1;
                 dispatcher.sendSegment(x1,y1,x2,y2);
             }
 
         } else {
             // Generar N segmentos con distribucion de coordenadas uniformes. Excepto la coordenada x de los verticales debe tener normal. Balance dependiendo de a.
+            //Genero los verticales
+            for (int i = 0; i < a*n ; i++){
+                x1 = normalRand.getGaussian()*XMAX;
+                y1 = uniRand.nextDouble()*YMAX;
+                x2 = x1;
+                y2 = uniRand.nextDouble()*YMAX;
+                dispatcher.sendSegment(x1,y1,x2,y2);
+            }
+            // Generar Horizontales
+            for (int i = 0; i < (a-1)*n; i++){
+                x1 = uniRand.nextDouble()*XMAX;
+                y1 = uniRand.nextDouble()*YMAX;
+                x2 = uniRand.nextDouble()*YMAX;
+                y2 = y1;
+                dispatcher.sendSegment(x1,y1,x2,y2);
+            }
 
         }
     }
