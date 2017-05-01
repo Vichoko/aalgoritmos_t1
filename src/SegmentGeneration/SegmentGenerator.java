@@ -1,5 +1,6 @@
 package SegmentGeneration;
 
+import java.io.File;
 import java.util.Random;
 /**
  * Segmentos almacenados como tupla (x1,y1, x2,y2)
@@ -33,18 +34,31 @@ public class SegmentGenerator {
     }
 
     protected void GenerateSegments(){
+        SegmentDispatcher dispatcher = new SegmentDispatcher(Long.toString(System.currentTimeMillis()));
         if (distr == EDistribution.UNIFORM){
-            Random rand = new Random();
             // Generar N segmentos con distribucion de coordenadas uniformes. Balance dependiendo de a.
+            Random rand = new Random();
+            double x1, y1, x2, y2;
 
             //Genero los verticales
             for (int i = 0; i < a*n ; i++){
-
+                x1 = rand.nextDouble()*XMAX;
+                y1 = rand.nextDouble()*YMAX;
+                x2 = x1;
+                y2 = rand.nextDouble()*YMAX;
+                dispatcher.sendSegment(x1,y1,x2,y2);
             }
             // Generar Horizontales
-            for (int i = 0; i < (a-1)*n; i++){}
+            for (int i = 0; i < (a-1)*n; i++){
+                x1 = rand.nextDouble()*XMAX;
+                y1 = rand.nextDouble()*YMAX;
+                x2 = rand.nextDouble()*YMAX;
+                y2 = y1;
+                dispatcher.sendSegment(x1,y1,x2,y2);
+            }
 
         } else {
+            // Generar N segmentos con distribucion de coordenadas uniformes. Excepto la coordenada x de los verticales debe tener normal. Balance dependiendo de a.
 
         }
     }
