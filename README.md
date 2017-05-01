@@ -21,6 +21,7 @@ Al llamar al método ```SegmentGenerator.GenerateSegments()```, Se crean los seg
 	
 # 2. Programación de Algoritmos
 ## 2.1. Sort
+Se eligió MergeSort en memoria secundaria, adaptado para ordenar por coordenada X o Y.
 ## 2.2. Distribution Sweep
 # 3. Pruebas
 # 4. Informe
