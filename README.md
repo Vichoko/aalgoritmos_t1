@@ -4,7 +4,7 @@
 Clase ```SegmentGenerator``` se instancia con los valores:
 
 	* N: Cantidad de segmentos a generar. {2^9, ..., 2^21}
-	* Distribución: De X en segmentos verticales. (Uniforme o Normal)
+	* Distribución: De X en segmentos verticales. {EDistribution.UNIFORM, EDistribution.NORMAL}
 	* a: Balance de segmentos verticales vs horizontales. {0.25, 0.5, 0.75}
 
 Además, al comienzo de la clase, se pueden customizar los siguientes parametros:
@@ -15,9 +15,7 @@ Además, al comienzo de la clase, se pueden customizar los siguientes parametros
 	static final double normalDesv = XMAX/7; // Desviacion estándar de la distribución Normal
 
 
-Al llamar al método ```SegmentGenerator.GenerateSegments()```:
-
-se crean los segmentos dejandolos en el archivo ```<timestamp>.txt``` en el formato pedido.
+Al llamar al método ```SegmentGenerator.GenerateSegments()```, Se crean los segmentos dejandolos en el archivo ```<timestamp>.txt``` en el formato pedido.
 
 	
 	
