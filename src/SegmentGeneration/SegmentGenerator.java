@@ -1,5 +1,10 @@
 package SegmentGeneration;
 
+import SegmentGeneration.Random.IRandom;
+import SegmentGeneration.Random.NormalRandom;
+import SegmentGeneration.Random.UniformRandom;
+import com.sun.deploy.xml.XMLAttribute;
+
 import java.util.Random;
 /**
  * Segmentos almacenados como tupla (x1,y1, x2,y2)
@@ -34,27 +39,28 @@ public class SegmentGenerator {
 
     protected void GenerateSegments(){
         SegmentDispatcher dispatcher = new SegmentDispatcher(Long.toString(System.currentTimeMillis()) + ".txt");
-        Random uniRand = new Random();
-        NormalRandom normalRand = new NormalRandom(XMAX/2, XMAX/7);
+        IRandom uniformXRand = new UniformRandom(XMAX);
+        IRandom uniformYRand = new UniformRandom(YMAX);
+        IRandom normalRand = new NormalRandom(XMAX/2, XMAX/7);
         double x1, y1, x2, y2;
 
         if (distr == EDistribution.UNIFORM){
             // Generar N segmentos con distribucion de coordenadas uniformes. Balance dependiendo de a.
             //Genero los verticales
             for (int i = 0; i < a*n ; i++){
-                x1 = uniRand.nextDouble()*XMAX;
-                y1 = uniRand.nextDouble()*YMAX;
+                x1 = uniformXRand.getRandom();
+                y1 = uniformYRand.getRandom();
 
                 x2 = x1;
-                y2 = uniRand.nextDouble()*YMAX;
+                y2 = uniformYRand.getRandom();
                 dispatcher.saveSegment(x1, y1, x2, y2);
             }
             // Generar Horizontales
             for (int i = 0; i < (1-a)*n; i++){
-                x1 = uniRand.nextDouble()*XMAX;
-                y1 = uniRand.nextDouble()*YMAX;
+                x1 = uniformXRand.getRandom();
+                y1 = uniformYRand.getRandom();
 
-                x2 = uniRand.nextDouble()*YMAX;
+                x2 = uniformXRand.getRandom();
                 y2 = y1;
                 dispatcher.saveSegment(x1, y1, x2, y2);
             }
@@ -63,19 +69,19 @@ public class SegmentGenerator {
             // Generar N segmentos con distribucion de coordenadas uniformes. Excepto la coordenada x de los verticales debe tener normal. Balance dependiendo de a.
             //Genero los verticales
             for (int i = 0; i < a*n ; i++){
-                x1 = normalRand.getGaussian();
-                y1 = uniRand.nextDouble()*YMAX;
+                x1 = normalRand.getRandom();
+                y1 = uniformYRand.getRandom();
 
                 x2 = x1;
-                y2 = uniRand.nextDouble()*YMAX;
+                y2 = uniformYRand.getRandom();
                 dispatcher.saveSegment(x1, y1, x2, y2);
             }
             // Generar Horizontales
             for (int i = 0; i < (1-a)*n; i++){
-                x1 = uniRand.nextDouble()*XMAX;
-                y1 = uniRand.nextDouble()*YMAX;
+                x1 = uniformXRand.getRandom();
+                y1 = uniformYRand.getRandom();
 
-                x2 = uniRand.nextDouble()*YMAX;
+                x2 = uniformXRand.getRandom();
                 y2 = y1;
                 dispatcher.saveSegment(x1, y1, x2, y2);
             }
