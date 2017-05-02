@@ -18,7 +18,9 @@ public final class Constants {
     public enum EAxis{
         X,Y}
 
-    public static final int M = 1024;
-    public static final int B = ;
+	// en Bytes
+    public static final int M = 1024*1024*1024; // Tamano de RAM: 1024 MB para probar
+    public static final int B = 512; // Tamano de bloque/sector: 512 bytes en mi pc
+	
 
 }
