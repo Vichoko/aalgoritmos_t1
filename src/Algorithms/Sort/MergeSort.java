@@ -1,13 +1,12 @@
 package Algorithms.Sort;
 
 import java.io.File;
+import static Static.Constants.*;
 
 /**
  * MergeSort adaptado para ordenar segmentos formateados como: (x1,y1,x2,y2)
  */
 
-enum EAxis{
-    X,Y}
 
 
 public class MergeSort {
@@ -22,7 +21,7 @@ public class MergeSort {
     }
 
     public void sort(){
-        
+
     }
 
 }

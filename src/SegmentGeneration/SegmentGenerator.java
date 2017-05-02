@@ -3,9 +3,9 @@ package SegmentGeneration;
 import SegmentGeneration.Random.IRandom;
 import SegmentGeneration.Random.NormalRandom;
 import SegmentGeneration.Random.UniformRandom;
-import com.sun.deploy.xml.XMLAttribute;
 
-import java.util.Random;
+import static Static.Constants.*;
+
 /**
  * Segmentos almacenados como tupla (x1,y1, x2,y2)
  *
@@ -17,16 +17,9 @@ import java.util.Random;
  *  aN horizontales, (1-a)N Verticales, a en {0.25, 0.5, 0.75}
  */
 
-enum EDistribution{
-    UNIFORM, NORMAL
-}
+
 
 public class SegmentGenerator {
-    static final int YMAX = 100;
-    static final int XMAX = 100;
-	static final double normalMean = XMAX/2;
-	static final double normalDesv = XMAX/7;
-
     int n;
     EDistribution distr;
     double a;
