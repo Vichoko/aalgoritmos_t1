@@ -1,7 +1,9 @@
 package Algorithms.Sort;
 
-import java.io.File;
+import java.io.*;
+
 import static Static.Constants.*;
+import static java.lang.System.exit;
 
 /**
  * MergeSort adaptado para ordenar segmentos formateados como: (x1,y1,x2,y2)
@@ -16,17 +18,25 @@ import static Static.Constants.*;
 
 
 public class MergeSort {
-    protected EAxis m_axis;
-    protected FileInputStream m_inStream;
-    protected FileOutputStream m_outStream;
+    private EAxis m_axis;
+
+    private FileInputStream m_inStream;
+    private FileOutputStream m_outStream;
 
 
     private File m_tempFile;
 
     public MergeSort(EAxis axis, File inFile, File outFile){
         m_axis = axis; // axis puede ser x o y, para cachar por que coordenada ordenar.
-        m_inStream = new FileInputStream(inFile);
-        m_outStream = new FileOutputStream(outFile);
+
+        try{ // abrir files
+            m_inStream = new FileInputStream(inFile);
+            m_outStream = new FileOutputStream(outFile);
+        } catch (FileNotFoundException e){
+            System.err.println("Mergesort:: inFile o outFile no se puede abrir");
+            System.err.println(e.toString());
+            exit(-1);
+        }
     }
 
     public void sort(){
@@ -39,14 +49,21 @@ public class MergeSort {
     }
     private void runGeneration(){
         byte[] run = new byte[M]; // Tamano del run es de tamano de RAM
-        m_inStream.read(run); // Se carga en RAM
+        try{
+            m_inStream.read(run); // Se carga en RAM
+        } catch (IOException e  ){
+            System.err.println("Mergesort:: inFile no se pudo leer :/ ");
+            System.err.println(e.toString());
+            exit(-2);
+        }
         // TODO: ordenar en memoria interna.
-        // TODO: Almacenar run en outfile.
+        // TODO: Almacenar run en tempFile.
 
 
     }
     private void runsMerge(){
-
+        //TODO: Leer de tempFile
+        //TODO: Hacer merge como sale en pdf e ir guardandolo en outFile
     }
 
 }
