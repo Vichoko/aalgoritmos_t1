@@ -1,10 +1,12 @@
-package SegmentGeneration;
+package segment;
 
-import SegmentGeneration.Random.IRandom;
-import SegmentGeneration.Random.NormalRandom;
-import SegmentGeneration.Random.UniformRandom;
+import random.IRandom;
+import random.NormalRandom;
+import random.UniformRandom;
+import segment.segment_dispatcher.SegmentDispatcher;
+import segment.segment_dispatcher.SegmentDispatcherPermanent;
 
-import static Static.Constants.*;
+import static utils.Constants.*;
 
 /**
  * Segmentos almacenados como tupla (x1,y1, x2,y2)
@@ -21,25 +23,34 @@ import static Static.Constants.*;
 
 public class SegmentGenerator {
     int n;
-    EDistribution distr;
+    EDistribution distribution;
     double a;
 
-
-
-    public SegmentGenerator(int n, EDistribution distr, double a){
+    /***
+     *
+     * @param n             Cantidad de segmentos a generar
+     * @param distribution  distribución De X en segmentos verticales
+     *                      {EDistribution.UNIFORM, EDistribution.NORMAL}
+     * @param a             Balance de segmentos verticales vs horizontales
+     */
+    public SegmentGenerator(int n, EDistribution distribution, double a){
         this.n = n;
-        this.distr = distr;
+        this.distribution = distribution;
         this.a = a;
     }
 
+    /***
+     * Creates the vertical and horizontal segments
+     * And uses segment_dispatcher to write them in a file
+     */
     protected void GenerateSegments(){
-        SegmentDispatcher dispatcher = new SegmentDispatcher(Long.toString(System.currentTimeMillis()) + ".txt");
-        IRandom uniformXRand = new UniformRandom(XMAX);
-        IRandom uniformYRand = new UniformRandom(YMAX);
-        IRandom normalRand = new NormalRandom(normalMean, normalDesv);
+        SegmentDispatcher dispatcher = new SegmentDispatcherPermanent(Long.toString(System.currentTimeMillis()) + ".txt");
+        IRandom uniformXRand = new UniformRandom(X_MAX);
+        IRandom uniformYRand = new UniformRandom(Y_MAX);
+        IRandom normalRand = new NormalRandom(NORMAL_MEAN, NORMAL_DEVIATION);
         double x1, y1, x2, y2;
 
-        if (distr == EDistribution.UNIFORM){
+        if (distribution == EDistribution.UNIFORM){
             // Generar N segmentos con distribucion de coordenadas uniformes. Balance dependiendo de a.
             //Genero los verticales
             for (int i = 0; i < a*n ; i++){
@@ -85,9 +96,8 @@ public class SegmentGenerator {
     }
 
     public static void main(String[] args){
-        SegmentGenerator generator = new SegmentGenerator((int) Math.pow(2,9) , EDistribution.NORMAL, 0.5);
-
+        SegmentGenerator generator = new SegmentGenerator(TOTAL_SEGMENTS, EDistribution.NORMAL, 0.5);
         generator.GenerateSegments();
-        System.out.println(" done");
+        System.out.println("Segments created");
     }
 }

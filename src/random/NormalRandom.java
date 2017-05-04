@@ -1,6 +1,7 @@
-package SegmentGeneration.Random;
+package random;
 
 import java.util.Random;
+import static Constants.*;
 
 /**
  * Created by vicen on 01-05-2017.
@@ -16,12 +17,12 @@ public class NormalRandom implements IRandom {
     }
 
     public double getRandom(){
-        double res = mean + rand.nextGaussian()*variance;
-
-        while (res > mean*2){ // arreglo para evitar que entregue coordenada > XMAX
-            res = mean + rand.nextGaussian()*variance;
+        double number = mean + rand.nextGaussian()*variance;
+        // avoid coordinate out of range
+        while (number > X_MAX){
+            number = mean + rand.nextGaussian()*variance;
         }
-        return res;
+        return number;
     }
 
 }

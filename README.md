@@ -1,13 +1,13 @@
 # Tarea 1: Diseño y Analisis de Algoritmos
 
 # 1. Generacion de segmentos
-Clase ```SegmentGeneration.SegmentGenerator``` se instancia con los valores:
+Clase ```segment.SegmentGenerator``` se instancia con los valores:
 
 	* N: Cantidad de segmentos a generar. {2^9, ..., 2^21}
 	* Distribución: De X en segmentos verticales. {EDistribution.UNIFORM, EDistribution.NORMAL}
 	* a: Balance de segmentos verticales vs horizontales. {0.25, 0.5, 0.75}
 
-Además, en la clase ```Static.Constants``` , se pueden customizar los siguientes parametros:
+Además, en la clase ```utils.Constants``` , se pueden customizar los siguientes parametros:
 
 	Static final int YMAX = 100; // Valor maximo de coordenada X
     Static final int XMAX = 100; // Valor maximo de coordenada Y

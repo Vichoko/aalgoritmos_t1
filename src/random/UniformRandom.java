@@ -1,4 +1,4 @@
-package SegmentGeneration.Random;
+package random;
 
 import java.util.Random;
 

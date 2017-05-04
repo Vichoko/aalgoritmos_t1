@@ -1,4 +1,4 @@
-package SegmentGeneration.Random;
+package random;
 
 /**
  * Created by vicen on 01-05-2017.
