@@ -14,17 +14,13 @@ import static java.lang.System.exit;
 
 
 public class MergeSort {
-    private FileInputStream m_inStream;
+    private RandomAccessFile accessFile;
     private SegmentComparator segmentsComparator;
     private String outputFilename;
-    // cache for reading
-    private int points = 0;
-    private double[] coordinates = new double[4];
-    private StringBuilder stringNextNumber = new StringBuilder();
 
     public static void main(String[] args){
         MergeSort mergeSort = new MergeSort(EAxis.X);
-        mergeSort.setInputFile(new File("1493943784947.txt"));
+        mergeSort.setInputFile(new File("1493999714093.txt"));
         String filename = mergeSort.sort();
         System.out.println("Segments sorted in "+filename);
     }
@@ -42,19 +38,22 @@ public class MergeSort {
     public String sort(){
         // first stage
         long segmentsRead = 0;
-        int runCount = 1; // id run
+        int runCount = 0; // id run
+        long bytesRead = 0;
         while (segmentsRead < TOTAL_SEGMENTS){
-            segmentsRead += readSortRun(runCount);
             runCount++;
+            int[] read = readSortRun(runCount, bytesRead);
+            bytesRead += read[0];
+            segmentsRead += read[1];
         }
         // second stage: merge
-        outputFilename = mergeRuns(runCount-1);
+        outputFilename = mergeRuns(runCount);
         return outputFilename;
     }
 
     public void setInputFile(File inFile){
         try{
-            m_inStream = new FileInputStream(inFile);
+            accessFile = new RandomAccessFile(inFile, "r");
         } catch (FileNotFoundException e){
             System.err.println("Mergesort:: inFile no se puede abrir");
             System.err.println(e.toString());
@@ -70,24 +69,38 @@ public class MergeSort {
      * Reads M bytes from the input file
      * Sorts them and saves them in a temporary file
      *
-     * @return  Number of segments read
+     * @return  Number of bytes read, number of segments read
      */
-    private int readSortRun(int runName){
+    private int[] readSortRun(int runName, long offset){
         // read max RAM size
         byte[] run = new byte[M];
         try{
-            m_inStream.read(run); // Se carga en RAM
+            accessFile.seek(offset);
+            accessFile.read(run); // Se carga en RAM
         } catch (IOException e  ){
             System.err.println("Mergesort:: inFile no se pudo leer :/ ");
             System.err.println(e.toString());
             exit(-2);
         }
         // get Segment objects from byte data
-        ArrayList<Segment> segments = getSegments(run);
+        ArrayBytesRead answer = getSegments(run);
+        ArrayList<Segment> segments = answer.segments;
+        int bytesRead = answer.bytesRead;
         segments.sort(segmentsComparator);
         // Save temporary file
         saveSegmentsTempFile(segments, "Run_"+runName);
-        return segments.size();
+        int[] myAnswer = {bytesRead, segments.size()};
+        return myAnswer;
+    }
+
+    public class ArrayBytesRead {
+        final ArrayList<Segment> segments;
+        final int bytesRead;
+
+        ArrayBytesRead(ArrayList<Segment> segments, int bytesRead) {
+            this.segments = segments;
+            this.bytesRead = bytesRead;
+        }
     }
 
     /**
@@ -95,11 +108,17 @@ public class MergeSort {
      * Creates segment objects each 4 numbers
      *
      * @param run   Bytes from where to get the coordinates
-     * @return      Segments in the run
+     * @return      Segments in the run and number of bytes read
      */
-    private ArrayList<Segment> getSegments(byte[] run){
+    private ArrayBytesRead getSegments(byte[] run){
+        // cache for reading
+        int points = 0;
+        double[] coordinates = new double[4];
+        StringBuilder stringNextNumber = new StringBuilder();
         ArrayList<Segment> segments = new ArrayList<>();
-        for(byte b: run) {
+        int bytesRead = 0;
+        for (int i = 0; i < run.length; i++) {
+            byte b = run[i];
             // end of bytes read
             if (b==0) break;
             char c = (char) b;
@@ -115,9 +134,10 @@ public class MergeSort {
                         coordinates[2], coordinates[3]);
                 segments.add(s);
                 points = 0;
+                bytesRead = i+1;
             }
         }
-        return segments;
+        return new ArrayBytesRead(segments, bytesRead);
     }
 
     /***
@@ -145,12 +165,12 @@ public class MergeSort {
         int numberLastFile = totalRuns; // id for file name
         // break: when we've read all the runs and there's just one file left
         while(filesMerged < totalRuns && filesMerged+1 < numberLastFile) {
-            FileInputStream[] inputs = new FileInputStream[m - 1];
+            ArrayList<RandomAccessFile> inputs = new ArrayList<>();
             // read next m-1 while there is more runs to read
             int i;
             for (i= 0; i < m-1 && i+filesMerged < numberLastFile; i++) {
                 try {
-                    inputs[i] = new FileInputStream("Run_" + (i+1+filesMerged)+".tmp");
+                    inputs.add(i, new RandomAccessFile("Run_" + (i+1+filesMerged)+".tmp", "r"));
                 } catch (FileNotFoundException e) {
                     System.err.println("Mergesort:: archivo temporal " + "Run_" + (i+1+filesMerged) + " no se pudo leer");
                     System.err.println(e.toString());
@@ -159,7 +179,7 @@ public class MergeSort {
             }
             // Merge
             mergeMRuns(inputs, "Run_"+(++numberLastFile));
-            filesMerged += i+1;
+            filesMerged += i;
         }
         return "Run_"+numberLastFile;
     }
@@ -170,37 +190,40 @@ public class MergeSort {
      * @param inputs    Files with segments sorted
      * @param nameFile  Name for the temporary file
      */
-    private void mergeMRuns(FileInputStream[] inputs, String nameFile) {
+    private void mergeMRuns(ArrayList<RandomAccessFile> inputs, String nameFile) {
+        int totalInputs = inputs.size();
         int m = M / B; // pages that fit in RAM
         int max_segments = B/32; // number of segments that fit in a page
         ArrayList<Segment> out = new ArrayList<>(max_segments);
         int out_index = 0;
         SegmentDispatcher fileOut = new SegmentDispatcherTemporary(nameFile);
-        int[] index = new int[m - 1];
-        // read a page from each run
-        ArrayList<Segment>[] runs_page = new ArrayList[m - 1];
-        for (int i = 0; i < m-1; i++) {
+        int[] offset = new int[totalInputs];
+        ArrayList<Segment>[] runs_page = new ArrayList[totalInputs];
+        int[] indexArray = new int[totalInputs];
+        for (int i = 0; i < totalInputs; i++) {
             runs_page[i] = new ArrayList<>();
         }
         while (true) {
             // find the minimum among all min elements of each run
             Segment min = null;
             int min_index = -1;
-            for (int i = 0; i < m - 1; i++) {
+            for (int i = 0; i < totalInputs; i++) {
                 // there's no more elements of run_i
-                if (index[i] == runs_page[i].size()) {
-                    ArrayList<Segment> s = readPage(inputs[i]);
-                    index[i] = (s == null) ? -1 : 0;
+                if (indexArray[i] == runs_page[i].size()) {
+                    ArrayBytesRead answer = readPage(inputs.get(i), offset[i]);
+                    runs_page[i] = answer.segments;
+                    offset[i] += answer.bytesRead;
+                    indexArray[i] = (runs_page[i].size()==0) ? -1 : 0;
                 }
                 // there's still elements of run_i
-                if (index[i] != -1) {
+                if (indexArray[i] != -1) {
                     if (min == null) {
-                        min = runs_page[i].get(index[i]);
+                        min = runs_page[i].get(indexArray[i]);
                         min_index = i;
                     } else {
-                        int result = segmentsComparator.compare(runs_page[i].get(index[i]), min);
+                        int result = segmentsComparator.compare(runs_page[i].get(indexArray[i]), min);
                         if (result < 0) {
-                            min = result < 0 ? runs_page[i].get(index[i]) : min;
+                            min = result < 0 ? runs_page[i].get(indexArray[i]) : min;
                             min_index = i;
                         }
                     }
@@ -209,16 +232,21 @@ public class MergeSort {
             // there're no more elements in none of the runs
             if (min == null) break;
             // add the minimum to out, "delete" it from the run
-            index[min_index]++;
+            indexArray[min_index]++;
             // if no more space in out
             if (out_index == max_segments) {
                 // save segments
                 for (Segment segment: out)
                     fileOut.saveSegment(segment.x1, segment.y1, segment.x2, segment.y2);
+                out.clear();
                 out_index = 0;
             }
             out.add(out_index, min);
             out_index++;
+        }
+        if (out.size() > 0){
+            for (Segment segment: out)
+                fileOut.saveSegment(segment.x1, segment.y1, segment.x2, segment.y2);
         }
         fileOut.close();
     }
@@ -226,14 +254,14 @@ public class MergeSort {
     /***
      * Reads segments from an input file
      * @param input File from where to read
-     * @return      List of segments read, null if no more to read
+     * @return      List of segments read
      */
-    private ArrayList<Segment> readPage(FileInputStream input) {
+    private ArrayBytesRead readPage(RandomAccessFile input, int offset) {
         // B page size
         byte[] buffer = new byte[B];
         try {
-            int bytesRead = input.read(buffer);
-            if (bytesRead == -1) return null;
+            input.seek(offset);
+            input.read(buffer);
         } catch (IOException e) {
             e.printStackTrace();
         }
