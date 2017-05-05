@@ -66,7 +66,7 @@ public class MergeSort {
     }
 
     /***
-     * Reads M bytes from the input file
+     * Reads M (size of RAM) bytes from the input file
      * Sorts them and saves them in a temporary file
      *
      * @return  Number of bytes read, number of segments read
@@ -93,18 +93,8 @@ public class MergeSort {
         return myAnswer;
     }
 
-    public class ArrayBytesRead {
-        final ArrayList<Segment> segments;
-        final int bytesRead;
-
-        ArrayBytesRead(ArrayList<Segment> segments, int bytesRead) {
-            this.segments = segments;
-            this.bytesRead = bytesRead;
-        }
-    }
-
     /**
-     * Transforms the bytes read to float
+     * Transforms the bytes read to list of double
      * Creates segment objects each 4 numbers
      *
      * @param run   Bytes from where to get the coordinates
@@ -154,10 +144,10 @@ public class MergeSort {
     }
 
     /**
-     * Merges files Run_i where i=1...totalRuns
+     * Merges files Run_i where i=1...totalRuns, saves it in a temporary file
      *
      * @param totalRuns Count of runs to be merged
-     * @return          filename of temporary file the merged
+     * @return          filename of merge
      */
     private String mergeRuns(int totalRuns){
         int filesMerged = 0; // id run to be read next
@@ -192,7 +182,6 @@ public class MergeSort {
      */
     private void mergeMRuns(ArrayList<RandomAccessFile> inputs, String nameFile) {
         int totalInputs = inputs.size();
-        int m = M / B; // pages that fit in RAM
         int max_segments = B/32; // number of segments that fit in a page
         ArrayList<Segment> out = new ArrayList<>(max_segments);
         int out_index = 0;
@@ -254,7 +243,7 @@ public class MergeSort {
     /***
      * Reads segments from an input file
      * @param input File from where to read
-     * @return      List of segments read
+     * @return      List of segments read and count bytes read
      */
     private ArrayBytesRead readPage(RandomAccessFile input, int offset) {
         // B page size
@@ -266,6 +255,19 @@ public class MergeSort {
             e.printStackTrace();
         }
         return getSegments(buffer);
+    }
+
+    /**
+     * Represents segments read and bytes count of those segments.
+     */
+    private class ArrayBytesRead {
+        final ArrayList<Segment> segments;
+        final int bytesRead;
+
+        ArrayBytesRead(ArrayList<Segment> segments, int bytesRead) {
+            this.segments = segments;
+            this.bytesRead = bytesRead;
+        }
     }
 
 }
