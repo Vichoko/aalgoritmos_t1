@@ -17,6 +17,10 @@ public class MergeSort {
     private FileInputStream m_inStream;
     private SegmentComparator segmentsComparator;
     private String outputFilename;
+    // cache for reading
+    private int points = 0;
+    private double[] coordinates = new double[4];
+    private StringBuilder stringNextNumber = new StringBuilder();
 
     public static void main(String[] args){
         MergeSort mergeSort = new MergeSort(EAxis.X);
@@ -94,21 +98,18 @@ public class MergeSort {
      * @return      Segments in the run
      */
     private ArrayList<Segment> getSegments(byte[] run){
-        StringBuilder sb = new StringBuilder();
-        int points = 0;
-        double[] coordinates = new double[4];
         ArrayList<Segment> segments = new ArrayList<>();
         for(byte b: run) {
             // end of bytes read
             if (b==0) break;
             char c = (char) b;
             if(c ==',') {
-                coordinates[points] = Double.parseDouble(sb.toString());
-                sb.setLength(0);
+                coordinates[points] = Double.parseDouble(stringNextNumber.toString());
+                stringNextNumber.setLength(0);
                 points++;
             }
             else if (c != '\n')
-                sb.append(c);
+                stringNextNumber.append(c);
             if (points==4){
                 Segment s = new Segment(coordinates[0], coordinates[1],
                         coordinates[2], coordinates[3]);
@@ -149,9 +150,9 @@ public class MergeSort {
             int i;
             for (i= 0; i < m-1 && i+filesMerged < numberLastFile; i++) {
                 try {
-                    inputs[i] = new FileInputStream("Run_" + (i+1+filesMerged));
+                    inputs[i] = new FileInputStream("Run_" + (i+1+filesMerged)+".tmp");
                 } catch (FileNotFoundException e) {
-                    System.err.println("Mergesort:: archivo temporal " + "Run_" + (i + filesMerged) + " no se pudo leer");
+                    System.err.println("Mergesort:: archivo temporal " + "Run_" + (i+1+filesMerged) + " no se pudo leer");
                     System.err.println(e.toString());
                     exit(-2);
                 }
@@ -178,6 +179,9 @@ public class MergeSort {
         int[] index = new int[m - 1];
         // read a page from each run
         ArrayList<Segment>[] runs_page = new ArrayList[m - 1];
+        for (int i = 0; i < m-1; i++) {
+            runs_page[i] = new ArrayList<>();
+        }
         while (true) {
             // find the minimum among all min elements of each run
             Segment min = null;
