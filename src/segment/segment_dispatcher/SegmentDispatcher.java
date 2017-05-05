@@ -36,7 +36,7 @@ public abstract class SegmentDispatcher{
         segmentsCount++;
     }
     public void close(){
-        if (sb.length()==0)
+        if (sb.length()!=0)
             writePage();
         pw.close();
     }

@@ -1,7 +1,8 @@
 package random;
 
 import java.util.Random;
-import static Constants.*;
+
+import static utils.Constants.*;
 
 /**
  * Created by vicen on 01-05-2017.

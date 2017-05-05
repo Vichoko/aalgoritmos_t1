@@ -15,13 +15,13 @@ public class SegmentDispatcherTemporary extends SegmentDispatcher {
         super(nameFile);
         File tempFile = null;
         try {
-            tempFile = File.createTempFile(nameFile, ".tmp");
+            tempFile = new File(nameFile+".tmp");
             pw = new PrintWriter(tempFile);
         } catch (IOException e) {
             System.err.println("Mergesort:: error al crear archivo temporal");
             System.err.println(e.toString());
             exit(-1);
         }
-        tempFile.deleteOnExit();
+        //tempFile.deleteOnExit();
     }
 }

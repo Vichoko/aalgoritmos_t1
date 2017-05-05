@@ -43,8 +43,9 @@ public class SegmentGenerator {
      * Creates the vertical and horizontal segments
      * And uses segment_dispatcher to write them in a file
      */
-    protected void GenerateSegments(){
-        SegmentDispatcher dispatcher = new SegmentDispatcherPermanent(Long.toString(System.currentTimeMillis()) + ".txt");
+    String GenerateSegments(){
+        String filename = Long.toString(System.currentTimeMillis()) + ".txt";
+        SegmentDispatcher dispatcher = new SegmentDispatcherPermanent(filename);
         IRandom uniformXRand = new UniformRandom(X_MAX);
         IRandom uniformYRand = new UniformRandom(Y_MAX);
         IRandom normalRand = new NormalRandom(NORMAL_MEAN, NORMAL_DEVIATION);
@@ -93,11 +94,12 @@ public class SegmentGenerator {
             }
         }
         dispatcher.close();
+        return filename;
     }
 
     public static void main(String[] args){
         SegmentGenerator generator = new SegmentGenerator(TOTAL_SEGMENTS, EDistribution.NORMAL, 0.5);
-        generator.GenerateSegments();
-        System.out.println("Segments created");
+        String filename = generator.GenerateSegments();
+        System.out.println("Segments created in "+filename);
     }
 }

@@ -18,24 +18,44 @@ public class MergeSort {
     private SegmentComparator segmentsComparator;
     private String outputFilename;
 
+    public static void main(String[] args){
+        MergeSort mergeSort = new MergeSort(EAxis.X);
+        mergeSort.setInputFile(new File("1493943784947.txt"));
+        String filename = mergeSort.sort();
+        System.out.println("Segments sorted in "+filename);
+    }
+
+
     /***
      * Sorts the segments in the file by the specified axis
      *
-     * @param inFile    Input file
      * @param axis      Sorts by this coordinate
      */
-    public MergeSort(File inFile, EAxis axis){
+    public MergeSort(EAxis axis){
         segmentsComparator = (axis==EAxis.X) ? new SegmentComparatorX() : new SegmentComparatorY();
-        openFiles(inFile);
+    }
+
+    public String sort(){
         // first stage
         long segmentsRead = 0;
-        int runCount = 1;
+        int runCount = 1; // id run
         while (segmentsRead < TOTAL_SEGMENTS){
             segmentsRead += readSortRun(runCount);
             runCount++;
         }
         // second stage: merge
-        outputFilename = mergeRuns(runCount);
+        outputFilename = mergeRuns(runCount-1);
+        return outputFilename;
+    }
+
+    public void setInputFile(File inFile){
+        try{
+            m_inStream = new FileInputStream(inFile);
+        } catch (FileNotFoundException e){
+            System.err.println("Mergesort:: inFile no se puede abrir");
+            System.err.println(e.toString());
+            exit(-1);
+        }
     }
 
     public String getOutputFilename(){
@@ -64,6 +84,39 @@ public class MergeSort {
         // Save temporary file
         saveSegmentsTempFile(segments, "Run_"+runName);
         return segments.size();
+    }
+
+    /**
+     * Transforms the bytes read to float
+     * Creates segment objects each 4 numbers
+     *
+     * @param run   Bytes from where to get the coordinates
+     * @return      Segments in the run
+     */
+    private ArrayList<Segment> getSegments(byte[] run){
+        StringBuilder sb = new StringBuilder();
+        int points = 0;
+        double[] coordinates = new double[4];
+        ArrayList<Segment> segments = new ArrayList<>();
+        for(byte b: run) {
+            // end of bytes read
+            if (b==0) break;
+            char c = (char) b;
+            if(c ==',') {
+                coordinates[points] = Double.parseDouble(sb.toString());
+                sb.setLength(0);
+                points++;
+            }
+            else if (c != '\n')
+                sb.append(c);
+            if (points==4){
+                Segment s = new Segment(coordinates[0], coordinates[1],
+                        coordinates[2], coordinates[3]);
+                segments.add(s);
+                points = 0;
+            }
+        }
+        return segments;
     }
 
     /***
@@ -181,47 +234,6 @@ public class MergeSort {
             e.printStackTrace();
         }
         return getSegments(buffer);
-    }
-
-    /**
-     * Transforms the bytes read to float
-     * Creates segment objects each 4 numbers
-     *
-     * @param run   Bytes from where to get the coordinates
-     * @return      Segments in the run
-     */
-    private ArrayList<Segment> getSegments(byte[] run){
-        StringBuilder sb = new StringBuilder();
-        int points = 0;
-        double[] coordinates = new double[4];
-        ArrayList<Segment> segments = new ArrayList<>();
-        for(byte b: run) {
-            char c = (char) b;
-            if(c ==',') {
-                coordinates[points] = Double.parseDouble(sb.toString());
-                sb.setLength(0);
-                points++;
-            }
-            else if (c != '\n')
-                sb.append(c);
-            if (points==4){
-                Segment s = new Segment(coordinates[0], coordinates[1],
-                        coordinates[2], coordinates[3]);
-                segments.add(s);
-                points = 0;
-            }
-        }
-        return segments;
-    }
-
-    private void openFiles(File inFile) {
-        try{
-            m_inStream = new FileInputStream(inFile);
-        } catch (FileNotFoundException e){
-            System.err.println("Mergesort:: inFile no se puede abrir");
-            System.err.println(e.toString());
-            exit(-1);
-        }
     }
 
 }
