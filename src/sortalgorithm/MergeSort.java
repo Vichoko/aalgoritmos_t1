@@ -1,4 +1,4 @@
-package sortalgorithms;
+package sortalgorithm;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -6,7 +6,8 @@ import java.util.ArrayList;
 import segment.segment_dispatcher.SegmentDispatcher;
 import segment.Segment;
 import segment.segment_dispatcher.SegmentDispatcherTemporary;
-import sortalgorithms.comparators.*;
+import sortalgorithm.comparators.*;
+import utils.UtilsIOSegments;
 
 import static utils.Constants.*;
 
@@ -19,8 +20,7 @@ public class MergeSort {
     private String outputFilename;
 
     public static void main(String[] args){
-        MergeSort mergeSort = new MergeSort(EAxis.X);
-        mergeSort.setInputFile(new File("1493999714093.txt"));
+        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1493999714093.txt"));
         String filename = mergeSort.sort();
         System.out.println("Segments sorted in "+filename);
     }
@@ -28,11 +28,19 @@ public class MergeSort {
 
     /***
      * Sorts the segments in the file by the specified axis
+     * Raises an error if no input file has been set
      *
      * @param axis      Sorts by this coordinate
      */
-    public MergeSort(EAxis axis){
+    public MergeSort(EAxis axis, File inFile){
         segmentsComparator = (axis==EAxis.X) ? new SegmentComparatorX() : new SegmentComparatorY();
+        try{
+            accessFile = new RandomAccessFile(inFile, "r");
+        } catch (FileNotFoundException e){
+            System.err.println("Mergesort:: inFile no se puede abrir");
+            System.err.println(e.toString());
+            exit(-1);
+        }
     }
 
     public String sort(){
@@ -49,16 +57,6 @@ public class MergeSort {
         // second stage: merge
         outputFilename = mergeRuns(runCount);
         return outputFilename;
-    }
-
-    public void setInputFile(File inFile){
-        try{
-            accessFile = new RandomAccessFile(inFile, "r");
-        } catch (FileNotFoundException e){
-            System.err.println("Mergesort:: inFile no se puede abrir");
-            System.err.println(e.toString());
-            exit(-1);
-        }
     }
 
     public String getOutputFilename(){
@@ -83,64 +81,14 @@ public class MergeSort {
             exit(-2);
         }
         // get Segment objects from byte data
-        ArrayBytesRead answer = getSegments(run);
+        UtilsIOSegments.ArrayBytesRead answer = UtilsIOSegments.getSegments(run);
         ArrayList<Segment> segments = answer.segments;
         int bytesRead = answer.bytesRead;
         segments.sort(segmentsComparator);
         // Save temporary file
-        saveSegmentsTempFile(segments, "Run_"+runName);
+        UtilsIOSegments.saveSegmentsTempFile(segments, "Run_"+runName);
         int[] myAnswer = {bytesRead, segments.size()};
         return myAnswer;
-    }
-
-    /**
-     * Transforms the bytes read to list of double
-     * Creates segment objects each 4 numbers
-     *
-     * @param run   Bytes from where to get the coordinates
-     * @return      Segments in the run and number of bytes read
-     */
-    private ArrayBytesRead getSegments(byte[] run){
-        // cache for reading
-        int points = 0;
-        double[] coordinates = new double[4];
-        StringBuilder stringNextNumber = new StringBuilder();
-        ArrayList<Segment> segments = new ArrayList<>();
-        int bytesRead = 0;
-        for (int i = 0; i < run.length; i++) {
-            byte b = run[i];
-            // end of bytes read
-            if (b==0) break;
-            char c = (char) b;
-            if(c ==',') {
-                coordinates[points] = Double.parseDouble(stringNextNumber.toString());
-                stringNextNumber.setLength(0);
-                points++;
-            }
-            else if (c != '\n')
-                stringNextNumber.append(c);
-            if (points==4){
-                Segment s = new Segment(coordinates[0], coordinates[1],
-                        coordinates[2], coordinates[3]);
-                segments.add(s);
-                points = 0;
-                bytesRead = i+1;
-            }
-        }
-        return new ArrayBytesRead(segments, bytesRead);
-    }
-
-    /***
-     * Saves array of segments in a temporary file
-     * @param segments  segments to be save
-     * @param nameFile
-     */
-    private void saveSegmentsTempFile(ArrayList<Segment> segments, String nameFile) {
-        SegmentDispatcher dispatcher = new SegmentDispatcherTemporary(nameFile);
-        for (Segment segment: segments){
-            dispatcher.saveSegment(segment.x1, segment.y1, segment.x2, segment.y2);
-        }
-        dispatcher.close();
     }
 
     /**
@@ -199,7 +147,7 @@ public class MergeSort {
             for (int i = 0; i < totalInputs; i++) {
                 // there's no more elements of run_i
                 if (indexArray[i] == runs_page[i].size()) {
-                    ArrayBytesRead answer = readPage(inputs.get(i), offset[i]);
+                    UtilsIOSegments.ArrayBytesRead answer = UtilsIOSegments.readPage(inputs.get(i), offset[i]);
                     runs_page[i] = answer.segments;
                     offset[i] += answer.bytesRead;
                     indexArray[i] = (runs_page[i].size()==0) ? -1 : 0;
@@ -226,7 +174,7 @@ public class MergeSort {
             if (out_index == max_segments) {
                 // save segments
                 for (Segment segment: out)
-                    fileOut.saveSegment(segment.x1, segment.y1, segment.x2, segment.y2);
+                    fileOut.saveSegment(segment);
                 out.clear();
                 out_index = 0;
             }
@@ -235,39 +183,9 @@ public class MergeSort {
         }
         if (out.size() > 0){
             for (Segment segment: out)
-                fileOut.saveSegment(segment.x1, segment.y1, segment.x2, segment.y2);
+                fileOut.saveSegment(segment);
         }
         fileOut.close();
-    }
-
-    /***
-     * Reads segments from an input file
-     * @param input File from where to read
-     * @return      List of segments read and count bytes read
-     */
-    private ArrayBytesRead readPage(RandomAccessFile input, int offset) {
-        // B page size
-        byte[] buffer = new byte[B];
-        try {
-            input.seek(offset);
-            input.read(buffer);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return getSegments(buffer);
-    }
-
-    /**
-     * Represents segments read and bytes count of those segments.
-     */
-    private class ArrayBytesRead {
-        final ArrayList<Segment> segments;
-        final int bytesRead;
-
-        ArrayBytesRead(ArrayList<Segment> segments, int bytesRead) {
-            this.segments = segments;
-            this.bytesRead = bytesRead;
-        }
     }
 
 }

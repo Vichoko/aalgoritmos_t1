@@ -1,7 +1,6 @@
-package sortalgorithms.comparators;
+package sortalgorithm.comparators;
 
 import segment.Segment;
-import utils.Constants;
 
 import java.util.Comparator;
 

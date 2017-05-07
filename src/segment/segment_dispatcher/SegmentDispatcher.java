@@ -14,10 +14,20 @@ public abstract class SegmentDispatcher{
     PrintWriter pw;
     private StringBuilder sb;
     private int segmentsCount;
+    private String pathname;
 
-    SegmentDispatcher(String nameFile){
+    SegmentDispatcher(String pathname){
+        this.pathname = pathname;
         sb = new StringBuilder();
         segmentsCount = 0;
+    }
+
+    public String getPathname() {
+        return pathname;
+    }
+
+    public void saveSegment(Segment segment){
+        saveSegment(segment.x1, segment.y1, segment.x2, segment.y2);
     }
     public void saveSegment(double x1, double y1, double x2, double y2){
         // format: "x1,x2,y1,y2,\n"

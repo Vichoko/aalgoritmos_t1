@@ -13,4 +13,10 @@ public class Segment{
         this.y2 = y2;
     }
 
+    public boolean isVertical(){
+        return y1==y2;
+    }
+    public boolean isHorizontal(){
+        return x1==x2;
+    }
 }
