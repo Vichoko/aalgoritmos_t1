@@ -1,4 +1,5 @@
 import segment.Segment;
+import segment.segment_dispatcher.PointFileWriter;
 import segment.segment_dispatcher.SegmentDispatcher;
 import segment.segment_dispatcher.SegmentDispatcherPermanent;
 import segment.segment_dispatcher.SegmentDispatcherTemporary;
@@ -20,15 +21,15 @@ import static java.lang.System.exit;
 public class DistributionSweep {
     private RandomAccessFile accessFile;
     private File inputFile;
-    private SegmentDispatcher answerFile;
-    private ArrayList<Segment> answerList;
+    private PointFileWriter answerFile;
+    private final int MAX_SIZE_DISPATCHER = (B-26)/3;
+    private final int MAX_SIZE_ACTIVE_LIST = 2*(B-26)/3;
 
     public DistributionSweep(File inputFile) {
         this.inputFile = inputFile;
     }
     public void getIntersections(String filename){
-        answerFile = new SegmentDispatcherPermanent(filename);
-        answerList = new ArrayList<>();
+        answerFile = new PointFileWriter(filename);
         String xSortFilename = new MergeSort(EAxis.X, inputFile).sort();
         String ySortFilename = new MergeSort(EAxis.Y, inputFile).sort();
         try {
@@ -36,7 +37,7 @@ public class DistributionSweep {
         } catch (IOException e) {
             System.err.println("DistributionSweep:: Error reading file");
             System.err.println(e.toString());
-            exit(-2);
+            exit(-1);
         }
         answerFile.close();
     }
@@ -59,6 +60,7 @@ public class DistributionSweep {
                 activeVerticals[i] = new ArrayDeque<>();
                 activeVerticalFile[i] = new RandomAccessFile(new File("activeVertical_"+i+".txt"), "rw");
                 yHorizontalFiles[i] = new SegmentDispatcherTemporary("yHorizontal_"+i);
+                yHorizontalFiles[i].setMaxBytesRAM(MAX_SIZE_DISPATCHER);
                 horizontalNotComplete[i] = false;
             }
             RandomAccessFile ySegmentsSorted = new RandomAccessFile(ySortedFilename, "r");
@@ -79,7 +81,7 @@ public class DistributionSweep {
                         // search first and last slab where the segment is complete
                         int[] index = getIndexSegment(segment, slabs, yHorizontalFiles, horizontalNotComplete);
                         if (index != null)
-                            writeIntersections(activeVerticals, activeVerticalFile, index[0], index[1]);
+                            writeIntersections(activeVerticals, activeVerticalFile, index[0], index[1], segment.y1);
                     }
                 }
             }
@@ -101,20 +103,56 @@ public class DistributionSweep {
      * @param activeVerticalFile    File with active verticals
      * @param slab_i                first slab where to check intersections
      * @param slab_j                last slab where to check intersections
+     * @param sweepLineHeight       Height of sweep line
      */
     private void writeIntersections(ArrayDeque<Segment>[] activeVerticals, RandomAccessFile[] activeVerticalFile,
-                                    int slab_i, int slab_j) {
+                                    int slab_i, int slab_j, double sweepLineHeight) {
+        for (int slab = slab_i; slab <= slab_j; slab++) {
+            // check verticals in RAM
+            for (int j = 0; j < activeVerticals[slab].size(); j++) {
+                Segment s = activeVerticals[slab].getLast();
+                if (s.y1 < sweepLineHeight) activeVerticals[slab].removeLast();
+                else answerFile.savePoint(s.x1, sweepLineHeight);
+            }
+            // check verticals in file
+            int offset = 0;
+            while (true){
+                UtilsIOSegments.ArrayBytesRead read = UtilsIOSegments.readPage(activeVerticalFile[slab], offset);
+                ArrayList<Segment> segments = read.segments;
+                if (segments.size()==0) break;
+                offset += read.bytesRead;
+                for (Segment s: segments){
+                    if (s.y1 < sweepLineHeight); // TODO: eliminarlo
+                    else answerFile.savePoint(s.x1, sweepLineHeight);
+                }
+            }
+        }
     }
 
     /**
      * Adds the segment to the active vertical list, if its full it writes in the file
-     * @param activeVertical
-     * @param randomAccessFile
-     * @param segment
+     * @param activeVertical    Where to add the segment
+     * @param randomAccessFile  Where to write the list if it's full
+     * @param segment           The segment to be added
      */
     private void addToActiveVerticals(ArrayDeque<Segment> activeVertical, RandomAccessFile randomAccessFile,
                                       Segment segment) {
-        // TODO:
+        StringBuilder toFile = new StringBuilder();
+        if (activeVertical.size()+1 >= MAX_SIZE_ACTIVE_LIST){
+            while (!activeVertical.isEmpty()){
+                Segment s = activeVertical.pollLast();
+                toFile.append(s.x1).append(",").append(s.y1).append(",");
+                toFile.append(s.x2).append(",").append(s.y2).append(",\n");
+            }
+            try {
+                randomAccessFile.writeUTF(toFile.toString());
+            } catch (IOException e) {
+                System.err.println("DistributionSweep:: Error writing in file");
+                System.err.println(e.toString());
+                exit(-2);
+            }
+        }
+        activeVertical.add(segment);
     }
 
     /**
