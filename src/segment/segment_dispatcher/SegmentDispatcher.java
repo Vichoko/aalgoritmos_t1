@@ -2,28 +2,66 @@ package segment.segment_dispatcher;
 
 import segment.Segment;
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
 import static utils.Constants.*;
 
-/**
- * Recibe un segmento (x1,y1,x2,y2) y lo envía al outfile para que quede almacenado.
- */
-public abstract class SegmentDispatcher{
+abstract class FileWriter{
     PrintWriter pw;
-    private StringBuilder sb;
-    private int segmentsCount;
+    StringBuilder sb;
     private String pathname;
+    int maxElements;
+    int elementsCount;
 
-    SegmentDispatcher(String pathname){
+    public FileWriter(String pathname) {
         this.pathname = pathname;
         sb = new StringBuilder();
-        segmentsCount = 0;
+        elementsCount = 0;
     }
 
     public String getPathname() {
         return pathname;
+    }
+
+    abstract public void setMaxBytesRAM(int maxBytesRAM);
+
+    public void close(){
+        if (sb.length()!=0)
+            writePage();
+        pw.close();
+    }
+
+    void checkCapacity(){
+        if (elementsCount+1 >= maxElements){
+            writePage();
+            elementsCount = 0;
+            sb.setLength(0);
+        }
+    }
+
+    void writePage(){
+        pw.write(sb.toString());
+    }
+    double truncateTo3dec(double src){
+        return Math.floor(src*1000)/1000;
+    }
+}
+
+public abstract class SegmentDispatcher extends FileWriter{
+
+
+    public SegmentDispatcher(String pathname){
+        super(pathname);
+        // 8bytes*4 + 5bytes = 37 bytes
+        // B size page, B/37 = #segments that fit in a page
+        maxElements = B/37;
+    }
+
+    @Override
+    public void setMaxBytesRAM(int maxBytesRAM) {
+        this.maxElements = maxBytesRAM/37;
     }
 
     public void saveSegment(Segment segment){
@@ -35,26 +73,9 @@ public abstract class SegmentDispatcher{
         String sy1= Double.toString(truncateTo3dec(y1));
         String sx2 = Double.toString(truncateTo3dec(x2));
         String sy2= Double.toString(truncateTo3dec(y2));
-        // 8bytes*4 + 5bytes = 37 bytes
-        // B size page, B/37 = #segments that fit in a page
-        if (segmentsCount+1 >= B/37){
-            writePage();
-            segmentsCount = 0;
-            sb.setLength(0);
-        }
+        checkCapacity();
         sb.append(sx1).append(",").append(sy1).append(",").append(sx2).append(",").append(sy2).append(",\n");
-        segmentsCount++;
-    }
-    public void close(){
-        if (sb.length()!=0)
-            writePage();
-        pw.close();
-    }
-    private void writePage(){
-        pw.write(sb.toString());
-    }
-    private double truncateTo3dec(double src){
-        return Math.floor(src*1000)/1000;
+        elementsCount++;
     }
 }
 
