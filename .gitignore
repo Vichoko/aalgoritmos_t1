@@ -1,3 +1,6 @@
 *.class
 *.txt
-*.iml.idea
+*.iml
+.idea/
+.idea
+
