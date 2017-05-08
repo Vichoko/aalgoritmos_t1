@@ -18,6 +18,12 @@ public class MergeSort {
     private RandomAccessFile accessFile;
     private SegmentComparator segmentsComparator;
     private String outputFilename;
+    private int verticalSegmentsNo;
+    public int getVerticalSegmentsNo() {
+        return verticalSegmentsNo;
+    }
+
+
 
     public static void main(String[] args){
         MergeSort mergeSort = new MergeSort(EAxis.X, new File("1493999714093.txt"));
@@ -33,6 +39,7 @@ public class MergeSort {
      * @param axis      Sorts by this coordinate
      */
     public MergeSort(EAxis axis, File inFile){
+        verticalSegmentsNo = -1;
         segmentsComparator = (axis==EAxis.X) ? new SegmentComparatorX() : new SegmentComparatorY();
         try{
             accessFile = new RandomAccessFile(inFile, "r");
@@ -45,6 +52,7 @@ public class MergeSort {
 
     public String sort(){
         // first stage
+        verticalSegmentsNo = 0;
         long segmentsRead = 0;
         int runCount = 0; // id run
         long bytesRead = 0;
@@ -85,10 +93,14 @@ public class MergeSort {
         ArrayList<Segment> segments = answer.segments;
         int bytesRead = answer.bytesRead;
         segments.sort(segmentsComparator);
+        for (Segment s : segments){ // having segments in RAM, calculate number of vertical segments on the run.
+            if (s.isVertical()){
+                verticalSegmentsNo++;
+            }
+        }
         // Save temporary file
         UtilsIOSegments.saveSegmentsTempFile(segments, "Run_"+runName);
-        int[] myAnswer = {bytesRead, segments.size()};
-        return myAnswer;
+        return new int[]{bytesRead, segments.size()};
     }
 
     /**

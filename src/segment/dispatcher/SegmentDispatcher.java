@@ -3,6 +3,8 @@ package segment.dispatcher;
 import segment.Segment;
 
 import java.io.PrintWriter;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 
 import static utils.Constants.*;
 
@@ -13,7 +15,7 @@ abstract class FileWriter{
     int maxElements;
     int elementsCount;
 
-    public FileWriter(String pathname) {
+    FileWriter(String pathname) {
         this.pathname = pathname;
         sb = new StringBuilder();
         elementsCount = 0;
@@ -39,7 +41,7 @@ abstract class FileWriter{
         }
     }
 
-    void writePage(){
+    private void writePage(){
         pw.write(sb.toString());
     }
     double truncateTo3dec(double src){
@@ -50,7 +52,7 @@ abstract class FileWriter{
 public abstract class SegmentDispatcher extends FileWriter{
 
 
-    public SegmentDispatcher(String pathname){
+    SegmentDispatcher(String pathname){
         super(pathname);
         // 8bytes*4 + 5bytes = 37 bytes
         // B size page, B/37 = #segments that fit in a page
@@ -65,6 +67,19 @@ public abstract class SegmentDispatcher extends FileWriter{
     public void saveSegment(Segment segment){
         saveSegment(segment.x1, segment.y1, segment.x2, segment.y2);
     }
+
+    public void saveSegments(ArrayList<Segment> segments){
+        for (Segment s : segments){
+            saveSegment(s);
+        }
+    }
+
+    public void saveSegments(ArrayDeque<Segment> segments){
+        for (Segment s : segments){
+            saveSegment(s);
+        }
+    }
+
     public void saveSegment(double x1, double y1, double x2, double y2){
         // format: "x1,x2,y1,y2,\n"
         String sx1 = Double.toString(truncateTo3dec(x1));

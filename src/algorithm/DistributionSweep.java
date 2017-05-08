@@ -16,13 +16,12 @@ import java.util.ArrayList;
 
 import static java.lang.System.exit;
 
-/**
- * Created by constanzafierro on 07-05-17.
- */
+
 public class DistributionSweep {
     private RandomAccessFile accessFile;
     private File inputFile;
     private PointFileWriter answerFile;
+    private int verticalSegmentsNo;
     private final int MAX_SIZE_DISPATCHER = (B-26)/3;
     private final int MAX_SIZE_ACTIVE_LIST = 2*(B-26)/3;
 
@@ -31,8 +30,11 @@ public class DistributionSweep {
     }
     public void getIntersections(String filename){
         answerFile = new PointFileWriter(filename);
-        String xSortFilename = new MergeSort(EAxis.X, inputFile).sort();
+        MergeSort xSort = new MergeSort(EAxis.X, inputFile);
+        String xSortFilename = xSort.sort();
         String ySortFilename = new MergeSort(EAxis.Y, inputFile).sort();
+        verticalSegmentsNo = xSort.getVerticalSegmentsNo();
+
         try {
             recursiveDistributionSweep(xSortFilename, 0, (int)inputFile.length(), ySortFilename);
         } catch (IOException e) {
@@ -46,6 +48,7 @@ public class DistributionSweep {
     private void recursiveDistributionSweep(String xSortedFilename, int beginOffset, int endOffset,
                                             String ySortedFilename) throws IOException {
         // it fits in RAM
+        //noinspection StatementWithEmptyBody
         if(endOffset-beginOffset < M){
             // TODO
         }
@@ -107,13 +110,17 @@ public class DistributionSweep {
      * @param sweepLineHeight       Height of sweep line
      */
     private void writeIntersections(ArrayDeque<Segment>[] activeVerticals, RandomAccessFile[] activeVerticalFile,
-                                    int slab_i, int slab_j, double sweepLineHeight) {
+                                    int slab_i, int slab_j, double sweepLineHeight) throws FileNotFoundException {
         for (int slab = slab_i; slab <= slab_j; slab++) {
+            // new activeVerticalFile with updated content (After deletes)
+            SegmentDispatcherTemporary updateDispatcher = new SegmentDispatcherTemporary("activeVertical_"+ Long.toString(System.currentTimeMillis()));
+
             // check verticals in RAM
             for (int j = 0; j < activeVerticals[slab].size(); j++) {
                 Segment s = activeVerticals[slab].getLast();
                 if (s.y1 < sweepLineHeight) activeVerticals[slab].removeLast();
                 else answerFile.savePoint(s.x1, sweepLineHeight);
+                updateDispatcher.saveSegments(activeVerticals[slab]);
             }
             // check verticals in file
             int offset = 0;
@@ -123,12 +130,36 @@ public class DistributionSweep {
                 if (segments.size()==0) break;
                 offset += read.bytesRead;
                 for (Segment s: segments){
-                    if (s.y1 < sweepLineHeight); // TODO: eliminarlo
+                    if (s.y1 < sweepLineHeight){
+                        segments.remove(s);
+                    }
                     else answerFile.savePoint(s.x1, sweepLineHeight);
                 }
+
+                // idea traer buffer a RAM, despues devolverlo a disco, actualizado
+                updateDispatcher.saveSegments(segments);
             }
+            // update references and refresh old data in RAM
+            activeVerticalFile[slab] = new RandomAccessFile(updateDispatcher.getFile(), "rw");
+            reloadLoadedActiveVerticals(activeVerticals[slab], activeVerticalFile[slab]);
         }
     }
+    /** *
+     *  Load the deque with refreshed data from disk.
+     */
+    private void reloadLoadedActiveVerticals(ArrayDeque<Segment> activeVerticals, RandomAccessFile randomAccessFile) {
+        activeVerticals.clear();
+        int offset = 0;
+        while (activeVerticals.size() < MAX_SIZE_ACTIVE_LIST){
+            UtilsIOSegments.ArrayBytesRead read = UtilsIOSegments.readPage(randomAccessFile, offset);
+            ArrayList<Segment> segments = read.segments;
+            if (segments.size()==0) break;
+            offset += read.bytesRead;
+            for (Segment s: segments){
+                activeVerticals.addLast(s);
+            }
+        }
+}
 
     /**
      * Adds the segment to the active vertical list, if its full it writes in the file
@@ -215,9 +246,58 @@ public class DistributionSweep {
      * @throws IOException      Error reading the file
      */
     private Slab[] generateSlabs(String xSortedFilename, int beginOffset, int endOffset) throws IOException {
-        // TODO:
-        return null;
+        int k = M/B;
+        Slab[] slabs = new Slab[k];
+
+        int len = verticalSegmentsNo/k;
+
+        RandomAccessFile xSegmentsSorted = new RandomAccessFile(xSortedFilename, "r");
+        int offset = beginOffset;
+
+        // slab creation vars
+        int verticalCounter = 0;
+        int slabCounter = 0;
+        int offset_init = offset;
+        double startX = Double.MAX_VALUE;
+        double lastXseen = Double.MIN_VALUE;
+
+        while (true) {
+            UtilsIOSegments.ArrayBytesRead page = UtilsIOSegments.readPage(xSegmentsSorted, offset);
+            ArrayList<Segment> segments = page.segments;
+            offset += page.bytesRead;
+            if (segments.size()==0) break;
+            for(Segment s : segments){
+                if (s.isVertical()){
+                    if (verticalCounter == 0){ // first time
+                        startX = s.x1;
+                    }
+                    lastXseen = s.x1;
+                    verticalCounter++;
+
+                    if (verticalCounter >= len){ //last vertical segment in slab
+                        slabs[slabCounter] = new Slab(offset_init, offset, startX, s.x1, verticalCounter);
+                        //restart
+                        verticalCounter = 0;
+                        slabCounter++;
+                        offset_init = offset;
+                        startX = Double.MAX_VALUE;
+                    }
+                }
+            }
+        }
+        if (verticalCounter != 0){ // add remaining to last slab
+            assert (slabCounter == k-1);
+            slabs[slabCounter] = new Slab(
+                    slabs[slabCounter].initialOffset,
+                    offset,
+                    slabs[slabCounter].initX,
+                    lastXseen,
+                    slabs[slabCounter].verticalSegmentsNumber + verticalCounter);
+        }
+
+        return slabs;
     }
+
 
     /**
      * Counts the lines in a file
