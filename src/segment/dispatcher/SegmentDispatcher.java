@@ -1,10 +1,8 @@
-package segment.segment_dispatcher;
+package segment.dispatcher;
 
 import segment.Segment;
 
-import java.io.File;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 
 import static utils.Constants.*;
 

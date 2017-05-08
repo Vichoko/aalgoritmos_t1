@@ -1,12 +1,12 @@
-package sortalgorithm;
+package algorithm.sort;
 
 import java.io.*;
 import java.util.ArrayList;
 
-import segment.segment_dispatcher.SegmentDispatcher;
+import segment.dispatcher.SegmentDispatcher;
 import segment.Segment;
-import segment.segment_dispatcher.SegmentDispatcherTemporary;
-import sortalgorithm.comparators.*;
+import segment.dispatcher.SegmentDispatcherTemporary;
+import algorithm.sort.comparators.*;
 import utils.UtilsIOSegments;
 
 import static utils.Constants.*;

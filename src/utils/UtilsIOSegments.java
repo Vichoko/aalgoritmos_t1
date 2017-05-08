@@ -1,9 +1,8 @@
 package utils;
 
 import segment.Segment;
-import segment.segment_dispatcher.SegmentDispatcher;
-import segment.segment_dispatcher.SegmentDispatcherTemporary;
-import sortalgorithm.MergeSort;
+import segment.dispatcher.SegmentDispatcher;
+import segment.dispatcher.SegmentDispatcherTemporary;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;

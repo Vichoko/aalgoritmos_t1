@@ -1,4 +1,4 @@
-package segment.segment_dispatcher;
+package segment.dispatcher;
 
 import static utils.Constants.B;
 

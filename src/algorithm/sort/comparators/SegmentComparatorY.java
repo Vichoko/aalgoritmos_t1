@@ -1,4 +1,4 @@
-package sortalgorithm.comparators;
+package algorithm.sort.comparators;
 
 import segment.Segment;
 

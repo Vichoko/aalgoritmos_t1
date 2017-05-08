@@ -1,10 +1,10 @@
 package segment;
 
-import random.IRandom;
-import random.NormalRandom;
-import random.UniformRandom;
-import segment.segment_dispatcher.SegmentDispatcher;
-import segment.segment_dispatcher.SegmentDispatcherPermanent;
+import utils.random.IRandom;
+import utils.random.NormalRandom;
+import utils.random.UniformRandom;
+import segment.dispatcher.SegmentDispatcher;
+import segment.dispatcher.SegmentDispatcherPermanent;
 
 import static utils.Constants.*;
 
@@ -41,7 +41,7 @@ public class SegmentGenerator {
 
     /***
      * Creates the vertical and horizontal segments
-     * And uses segment_dispatcher to write them in a file
+     * And uses segment.dispatcher to write them in a file
      */
     String GenerateSegments(){
         String filename = Long.toString(System.currentTimeMillis()) + ".txt";

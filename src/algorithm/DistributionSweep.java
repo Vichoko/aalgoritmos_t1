@@ -1,11 +1,12 @@
+package algorithm;
+
 import segment.Segment;
-import segment.segment_dispatcher.PointFileWriter;
-import segment.segment_dispatcher.SegmentDispatcher;
-import segment.segment_dispatcher.SegmentDispatcherPermanent;
-import segment.segment_dispatcher.SegmentDispatcherTemporary;
-import sortalgorithm.MergeSort;
-import utils.Slab;
-import utils.UtilsIOSegments;
+import segment.dispatcher.PointFileWriter;
+import segment.dispatcher.SegmentDispatcher;
+import segment.dispatcher.SegmentDispatcherTemporary;
+import algorithm.sort.MergeSort;
+import utils.*;
+
 
 import static utils.Constants.*;
 
@@ -35,7 +36,7 @@ public class DistributionSweep {
         try {
             recursiveDistributionSweep(xSortFilename, 0, (int)inputFile.length(), ySortFilename);
         } catch (IOException e) {
-            System.err.println("DistributionSweep:: Error reading file");
+            System.err.println("algorithm.DistributionSweep:: Error reading file");
             System.err.println(e.toString());
             exit(-1);
         }
@@ -147,7 +148,7 @@ public class DistributionSweep {
             try {
                 randomAccessFile.writeUTF(toFile.toString());
             } catch (IOException e) {
-                System.err.println("DistributionSweep:: Error writing in file");
+                System.err.println("algorithm.DistributionSweep:: Error writing in file");
                 System.err.println(e.toString());
                 exit(-2);
             }
@@ -175,7 +176,7 @@ public class DistributionSweep {
             horizontalNotComplete[slab_i] = true;
             return null;
         }
-        if (i > slabs[slab_i].initX && i < slabs[slab_i].finalX){
+        if (i > slabs[slab_i].initX && i < slabs[slab_i].finalX){// contained completly inside slab_i
             yHorizontalFiles[slab_i].saveSegment(segment);
             horizontalNotComplete[slab_i] = true;
             slab_i++;

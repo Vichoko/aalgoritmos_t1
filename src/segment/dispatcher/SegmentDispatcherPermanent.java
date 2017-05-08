@@ -1,4 +1,4 @@
-package segment.segment_dispatcher;
+package segment.dispatcher;
 
 import java.io.File;
 import java.io.FileWriter;
