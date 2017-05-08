@@ -10,9 +10,6 @@ import java.util.ArrayList;
 
 import static utils.Constants.B;
 
-/**
- * Created by constanzafierro on 07-05-17.
- */
 public class UtilsIOSegments {
     /**
      * Transforms the bytes read to list of double
@@ -54,7 +51,7 @@ public class UtilsIOSegments {
     /***
      * Saves array of segments in a temporary file
      * @param segments  segments to be save
-     * @param nameFile
+     * @param nameFile file name
      */
     public static void saveSegmentsTempFile(ArrayList<Segment> segments, String nameFile) {
         SegmentDispatcher dispatcher = new SegmentDispatcherTemporary(nameFile);
@@ -70,10 +67,31 @@ public class UtilsIOSegments {
      * @return      An ArrayBytesRead object, with the segments list and the number of bytes read
      */
     public static ArrayBytesRead readPage(RandomAccessFile input, int offset) {
+        return readPage(input, offset, Integer.MAX_VALUE);
+    }
+    /***
+     * Reads segments from an input file
+     * @param input File from where to read
+     * @param startOffset Start mark where to start reading in bytes.
+     * @param endOffset Start mark where to end reading in bytes.
+     *
+     * @return      An ArrayBytesRead object, with the segments list and the number of bytes read
+     */
+    public static ArrayBytesRead readPage(RandomAccessFile input, int startOffset, int endOffset) {
+        byte[] buffer;
         // B page size
-        byte[] buffer = new byte[B];
+        if (endOffset-startOffset >= B){ //Read a page
+            buffer = new byte[B];
+        }
+        else if(startOffset >= endOffset){ // dont read anything
+            return getSegments(new byte[0]);
+        }
+        else { //read until less than B, until offset
+            buffer = new byte[endOffset-startOffset];
+        }
+
         try {
-            input.seek(offset);
+            input.seek(startOffset);
             input.read(buffer);
         } catch (IOException e) {
             e.printStackTrace();
