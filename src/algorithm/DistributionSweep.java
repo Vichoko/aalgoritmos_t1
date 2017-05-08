@@ -58,14 +58,14 @@ public class DistributionSweep {
             // def slab dependant objects
             ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.length];
             RandomAccessFile[] activeVerticalFile = new RandomAccessFile[slabs.length];
-            SegmentDispatcher[] yHorizontalFiles = new SegmentDispatcher[slabs.length];
+            SegmentDispatcher[] ySlabFiles = new SegmentDispatcher[slabs.length];
             boolean[] horizontalNotComplete = new boolean[slabs.length];
             for (int i = 0; i < slabs.length; i++) { // init slab dependant objects
                 activeVerticals[i] = new ArrayDeque<>();
                 activeVerticalFile[i] = new RandomAccessFile(new File("activeVertical_" + i + ".txt"), "rw");
-                yHorizontalFiles[i] = new SegmentDispatcherTemporary("yHorizontal_" + i);
+                ySlabFiles[i] = new SegmentDispatcherTemporary("yHorizontal_" + i);
 
-                yHorizontalFiles[i].setMaxBytesRAM(MAX_SIZE_DISPATCHER);
+                ySlabFiles[i].setMaxBytesRAM(MAX_SIZE_DISPATCHER);
                 horizontalNotComplete[i] = false;
             }
             RandomAccessFile ySegmentsSorted = new RandomAccessFile(ySortedFilename, "r");
@@ -80,14 +80,15 @@ public class DistributionSweep {
                     if (segment.isVertical())
                     {// vertical segment
                         assert (segment.x1 == segment.x2);
-                        int index = getIndexSlab(segment.x1, slabs);
+                        //int index = getIndexSlab(segment.x1, slabs);
+                        int index = getIndexSlab(segment, slabs, ySlabFiles);
                         addToActiveVerticals(activeVerticals[index], activeVerticalFile[index], segment);
                     }
                     else
                     {// horizontal segment
                         assert (segment.y1 == segment.y2);
                         // search first and last slab where the segment is complete
-                        int[] index = getIndexSegment(segment, slabs, yHorizontalFiles, horizontalNotComplete);
+                        int[] index = getIndexSegment(segment, slabs, ySlabFiles, horizontalNotComplete);
                         if (index != null)
                             writeIntersections(activeVerticals, activeVerticalFile, index[0], index[1], segment.y1);
                     }
@@ -95,11 +96,11 @@ public class DistributionSweep {
             }
             // recursive call
             for (int i = 0; i < slabs.length; i++)
-                yHorizontalFiles[i].close();
+                ySlabFiles[i].close();
             for (int i = 0; i < slabs.length; i++) {
                 if (horizontalNotComplete[i])
                     recursiveDistributionSweep(xSortedFilename, slabs[i].initialOffset, slabs[i].finalOffset,
-                            yHorizontalFiles[i].getPathname(), slabs[i].verticalSegmentsNumber);
+                            ySlabFiles[i].getPathname(), slabs[i].verticalSegmentsNumber);
             }
         }
     }
@@ -205,7 +206,7 @@ public class DistributionSweep {
      *
      * @param segment               Segment to place
      * @param slabs                 List of Slab objects
-     * @param yHorizontalFiles      Where save the segments that are not complete
+     * @param yHorizontalFiles      Where save the horizontal segments that are not complete
      * @param horizontalNotComplete Where set to true the slabs that have segments not complete
      * @return first and last index where the segment is complete, if none then null
      */
@@ -240,10 +241,32 @@ public class DistributionSweep {
      * @param slabs List of Slab objects
      * @return The index or -1 if it's not between these slabs
      */
+    @Deprecated
     private int getIndexSlab(double i, Slab[] slabs) {
         for (int j = 0; j < slabs.length; j++) {
-            if (i >= slabs[j].initX && i < slabs[j].finalX)
+            if (i >= slabs[j].initX && i < slabs[j].finalX){
                 return j;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Search the slab where the x coordinate is placed.
+     * This method should be called for vertical segments
+     *
+     * @param segment   segment it x coordinate to be searched
+     * @param slabs List of Slab objects
+     * @param YSlabFiles Where save vertical segments for recursion
+     * @return The index or -1 if it's not between these slabs
+     */
+    private int getIndexSlab(Segment segment, Slab[] slabs, SegmentDispatcher[] YSlabFiles) {
+        assert (segment.x1 == segment.x2); // vertical check
+        for (int j = 0; j < slabs.length; j++) {
+            if (segment.x1 >= slabs[j].initX && segment.x1 < slabs[j].finalX){
+                YSlabFiles[j].saveSegment(segment);
+                return j;
+            }
         }
         return -1;
     }
