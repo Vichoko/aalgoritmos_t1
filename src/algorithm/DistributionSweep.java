@@ -208,7 +208,7 @@ public class DistributionSweep {
      * @throws FileNotFoundException
      */
     private ArrayList<Segment> extractXSortedArray(String xSortedFilename, int beginOffset, int endOffset) throws FileNotFoundException {
-        return SegmentFileToArray(xSortedFilename, beginOffset, endOffset);;
+        return SegmentFileToArray(xSortedFilename, beginOffset, endOffset);
     }
 
     /**
