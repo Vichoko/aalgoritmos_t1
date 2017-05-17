@@ -1,6 +1,7 @@
 package utils;
 
 public class Slab {
+    // parece que no se ocupan los ofsset finalmente
     public int initialOffset, finalOffset;
     public double initX, finalX;
 

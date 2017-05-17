@@ -45,12 +45,125 @@ public class DistributionSweep {
         answerFile.close();
     }
 
+    /**
+     * Ejecuta algoritmo 'Distribution Sweep' cuando los segmentos caben en memoria primaria.
+     *
+     * @param xSortedSegments        Lista de segmentos ordenados por X
+     * @param ySortedSegments        Lista de segmentos ordenados por Y
+     * @param verticalSegmentsNumber Numero de segmentos verticales
+     * @param beginIndex             Indice de xSortedSegments desde el cual se debe a leer.
+     * @param endIndex               Indice de xSortedSegments hasta el cual se debe leer.
+     *                               <p>
+     *                               N.A.: Es necesario dar los beginIndex y endIndex? Se podría cortar xSortedSegments.
+     */
+    private void localRecursiveDistributionSweep(ArrayList<Segment> xSortedSegments,
+                                                 ArrayList<Segment> ySortedSegments,
+                                                 int verticalSegmentsNumber, int beginIndex, int endIndex) {
+        Slab[] slabs = generateSlabsLocal(xSortedSegments, verticalSegmentsNumber, beginIndex, endIndex);
+
+        ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.length];
+        ArrayList<ArrayList<Segment>> slabRecursiveSegments = new ArrayList<>(slabs.length);
+        boolean[] horizontalNotComplete = new boolean[slabs.length];
+
+        for (int i = 0; i < slabs.length; i++) { // init slab dependant objects
+            activeVerticals[i] = new ArrayDeque<>();
+            slabRecursiveSegments.set(i, new ArrayList<>());
+            horizontalNotComplete[i] = false;
+        }
+        int offsetY = 0;
+        // sweep line
+
+        for (Segment segment : ySortedSegments) {
+            if (segment.isVertical()) {
+                int index = getIndexSlabLocal(segment, slabs);
+                addToActiveVerticals(activeVerticals[index], segment);
+            } else {
+                assert (segment.y1 == segment.y2); // horizontal assert
+                int[] index = getIndexinterval(segment, slabs, slabRecursiveSegments, horizontalNotComplete);
+                if (index != null) {
+                    writeIntersectionsLocal(activeVerticals, index[0], index[1], segment.y1);
+                }
+
+
+            }
+
+
+        }
+        // recursive call
+
+        for (int i = 0; i < slabs.length; i++) {
+            if (horizontalNotComplete[i])
+                recursiveDistributionSweep(xSortedFilename, slabs[i].initialOffset, slabs[i].finalOffset,
+                        ySlabFiles[i].getPathname(), slabs[i].verticalSegmentsNumber);
+        }
+    }
+
+    private Slab[] generateSlabsLocal(ArrayList<Segment> xSortedSegments, int verticalSegmentsNumber, int beginIndex, int endIndex) {
+        int k = M / B - 2;
+        int len = verticalSegmentsNumber / k;
+
+        Slab[] slabs = new Slab[k];
+
+
+        int verticalCounter = 0;
+        int slabCounter = 0;
+
+        int index_init = beginIndex;
+
+        double startX = Double.MAX_VALUE;
+        double lastXseen = Double.MIN_VALUE;
+        for (int index_current = beginIndex; index_current <= endIndex; index_current++) { // itera sobre el arreglo x, creando los slabs
+            // considerar eliminar el sistema de indices
+            Segment segment = xSortedSegments.get(index_current);
+            if (segment.isVertical()) {
+                if (verticalCounter == 0) {
+                    startX = segment.x1;
+                }
+                verticalCounter++;
+                lastXseen = segment.x1;
+
+                if (verticalCounter >= len) {
+                    slabs[slabCounter] = new Slab(index_init, index_current, startX, segment.x1, verticalCounter);
+                    // restart
+                    verticalCounter = 0;
+                    slabCounter++;
+                    index_init = index_current;
+                    startX = Double.MAX_VALUE;
+                }
+            }
+        }
+        if (verticalCounter != 0) { // add remaining to last slab
+            assert (slabCounter == k - 1); // if theory is good, should pass
+            slabs[slabCounter] = new Slab(
+                    slabs[slabCounter].initialOffset,
+                    endIndex,
+                    slabs[slabCounter].initX,
+                    lastXseen,
+                    slabs[slabCounter].verticalSegmentsNumber + verticalCounter);
+        }
+        return slabs;
+    }
+
+
+    /**
+     * @param xSortedFilename        Archivo donde estan los segmentos ordenados por X.
+     * @param beginOffset            Offset en bytes, desde donde se tiene que leer el archivo xSortedFilename
+     * @param endOffset              Offset en bytes, hasta donde se tiene que leer el archvio xSortedFilename
+     * @param ySortedFilename        Archivo dodne estan los segmentos ordenados por Y. Estos estan limitados al rango de offset por construccion.
+     * @param verticalSegmentsNumber Cantidad de segmentos verticales dentro del rango de offset
+     * @throws IOException
+     */
     private void recursiveDistributionSweep(String xSortedFilename, int beginOffset, int endOffset,
                                             String ySortedFilename, int verticalSegmentsNumber) throws IOException {
+
         // it fits in RAM
         //noinspection StatementWithEmptyBody
-        if (endOffset - beginOffset < M) {
-            // TODO
+        if (getMemorySize(beginOffset, endOffset) < M) {
+            // TODO: Extraer arreglo de xSortedFilenae, ademas beginindex y endindex
+            // TODO: Extraer arreglo de ySortedFilename
+            // localRecursiveDistributionSweep(xSortedSegments, ySortedSegments, verticalSegmentsNumber, beginIndex, endIndex);
+
+
         } else {
             // Obs. max bytes offset 2^21 * 10*4 (each point is a double, 8 bytes + comas and points = 10 bytes)
             // => 8*10^7, it fit in an integer
@@ -77,15 +190,12 @@ public class DistributionSweep {
                 offsetY += page.bytesRead;
                 if (segments.size() == 0) break;
                 for (Segment segment : segments) {
-                    if (segment.isVertical())
-                    {// vertical segment
+                    if (segment.isVertical()) {// vertical segment
                         assert (segment.x1 == segment.x2);
                         //int index = getIndexSlab(segment.x1, slabs);
                         int index = getIndexSlab(segment, slabs, ySlabFiles);
                         addToActiveVerticals(activeVerticals[index], activeVerticalFile[index], segment);
-                    }
-                    else
-                    {// horizontal segment
+                    } else {// horizontal segment
                         assert (segment.y1 == segment.y2);
                         // search first and last slab where the segment is complete
                         int[] index = getIndexSegment(segment, slabs, ySlabFiles, horizontalNotComplete);
@@ -103,6 +213,10 @@ public class DistributionSweep {
                             ySlabFiles[i].getPathname(), slabs[i].verticalSegmentsNumber);
             }
         }
+    }
+
+    private int getMemorySize(int beginOffset, int endOffset) {
+        return endOffset - beginOffset;
     }
 
     /**
@@ -125,7 +239,7 @@ public class DistributionSweep {
                     "rw");
 
             // check verticals in RAM
-            for (Segment s : activeVerticals[slab]){
+            for (Segment s : activeVerticals[slab]) {
                 if (s.y1 < sweepLineHeight) { // remove from active segments
                     activeVerticals[slab].remove(s);
                 } else {
@@ -244,7 +358,7 @@ public class DistributionSweep {
     @Deprecated
     private int getIndexSlab(double i, Slab[] slabs) {
         for (int j = 0; j < slabs.length; j++) {
-            if (i >= slabs[j].initX && i < slabs[j].finalX){
+            if (i >= slabs[j].initX && i < slabs[j].finalX) {
                 return j;
             }
         }
@@ -255,15 +369,15 @@ public class DistributionSweep {
      * Search the slab where the x coordinate is placed.
      * This method should be called for vertical segments
      *
-     * @param segment   segment it x coordinate to be searched
-     * @param slabs List of Slab objects
+     * @param segment    segment it x coordinate to be searched
+     * @param slabs      List of Slab objects
      * @param YSlabFiles Where save vertical segments for recursion
      * @return The index or -1 if it's not between these slabs
      */
     private int getIndexSlab(Segment segment, Slab[] slabs, SegmentDispatcher[] YSlabFiles) {
         assert (segment.x1 == segment.x2); // vertical check
         for (int j = 0; j < slabs.length; j++) {
-            if (segment.x1 >= slabs[j].initX && segment.x1 < slabs[j].finalX){
+            if (segment.x1 >= slabs[j].initX && segment.x1 < slabs[j].finalX) {
                 YSlabFiles[j].saveSegment(segment);
                 return j;
             }
