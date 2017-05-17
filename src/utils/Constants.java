@@ -1,8 +1,5 @@
 package utils;
 
-/**
- * Created by vicen on 01-05-2017.
- */
 public final class Constants {
 
     public enum EDistribution{
@@ -20,7 +17,7 @@ public final class Constants {
         X,Y}
 
 	// Bytes of RAM
-    public static final int M = 128;
+    public static final int M = 1024;
     // Bytes of page
     public static final int B = 32;
 
