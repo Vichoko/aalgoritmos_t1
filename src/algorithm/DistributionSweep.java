@@ -28,20 +28,14 @@ public class DistributionSweep {
         this.inputFile = inputFile;
     }
 
-    public void getIntersections(String filename) {
+    public void getIntersections(String filename) throws IOException {
         answerFile = new PointFileWriter(filename);
         MergeSort xSort = new MergeSort(EAxis.X, inputFile);
         String xSortFilename = xSort.sort();
         String ySortFilename = new MergeSort(EAxis.Y, inputFile).sort();
         int verticalSegmentsNo = xSort.getVerticalSegmentsNo();
 
-        try {
-            recursiveDistributionSweep(xSortFilename, 0, (int) inputFile.length(), ySortFilename, verticalSegmentsNo);
-        } catch (IOException e) {
-            System.err.println("algorithm.DistributionSweep:: Error reading file");
-            System.err.println(e.toString());
-            exit(-1);
-        }
+        recursiveDistributionSweep(xSortFilename, 0, (int) inputFile.length(), ySortFilename, verticalSegmentsNo);
         answerFile.close();
     }
 /************************************************************************************************************************************************** *
@@ -568,22 +562,6 @@ public class DistributionSweep {
     }
 
 
-    /************************************************************************************************************************************************** *
-     *          AUXILIARY CLASSES
-     ************************************************************************************************************************************************** *
-     */
-
-
-    class Triple {
-        Object a, b, c;
-
-        Triple(Object a, Object b, Object c) {
-            this.a = a;
-            this.b = b;
-            this.c = c;
-        }
-
-    }
 
 /************************************************************************************************************************************************** *
  *          UNUSED METHODS

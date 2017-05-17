@@ -17,7 +17,7 @@ public final class Constants {
         X,Y}
 
 	// Bytes of RAM
-    public static final int M = 1024;
+    public static final int M = 1024*1024*20;
     // Bytes of page
     public static final int B = 32;
 
