@@ -19,6 +19,7 @@ public class MergeSort {
     private SegmentComparator segmentsComparator;
     private String outputFilename;
     private int verticalSegmentsNo;
+    String suid;
     public int getVerticalSegmentsNo() {
         return verticalSegmentsNo;
     }
@@ -26,7 +27,7 @@ public class MergeSort {
 
 
     public static void main(String[] args){
-        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1493999714093.txt"));
+        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495063006490.txt"));
         String filename = mergeSort.sort();
         System.out.println("Segments sorted in "+filename);
     }
@@ -38,7 +39,8 @@ public class MergeSort {
      *
      * @param axis      Sorts by this coordinate
      */
-    public MergeSort(EAxis axis, File inFile){
+    public MergeSort(EAxis axis, File inFile, String sid){
+        suid = sid;
         verticalSegmentsNo = -1;
         segmentsComparator = (axis==EAxis.X) ? new SegmentComparatorX() : new SegmentComparatorY();
         try{
@@ -49,6 +51,12 @@ public class MergeSort {
             exit(-1);
         }
     }
+
+    public MergeSort(EAxis axis, File inFile){
+        this(axis,inFile, Double.toString(System.currentTimeMillis()));
+    }
+
+
 
     public String sort(){
         // first stage
@@ -99,7 +107,7 @@ public class MergeSort {
             }
         }
         // Save temporary file
-        UtilsIOSegments.saveSegmentsTempFile(segments, "Run_"+runName);
+        UtilsIOSegments.saveSegmentsTempFile(segments, "Run_"+suid+runName);
         return new int[]{bytesRead, segments.size()};
     }
 
@@ -120,18 +128,18 @@ public class MergeSort {
             int i;
             for (i= 0; i < m-1 && i+filesMerged < numberLastFile; i++) {
                 try {
-                    inputs.add(i, new RandomAccessFile("Run_" + (i+1+filesMerged)+".tmp", "r"));
+                    inputs.add(i, new RandomAccessFile("Run_"+suid + (i+1+filesMerged)+".tmp", "r"));
                 } catch (FileNotFoundException e) {
-                    System.err.println("Mergesort:: archivo temporal " + "Run_" + (i+1+filesMerged) + " no se pudo leer");
+                    System.err.println("Mergesort:: archivo temporal " + "Run_"+suid + (i+1+filesMerged) + " no se pudo leer");
                     System.err.println(e.toString());
                     exit(-2);
                 }
             }
             // Merge
-            mergeMRuns(inputs, "Run_"+(++numberLastFile));
+            mergeMRuns(inputs, "Run_"+suid+(++numberLastFile));
             filesMerged += i;
         }
-        return "Run_"+numberLastFile;
+        return "Run_"+suid+numberLastFile;
     }
 
     /**

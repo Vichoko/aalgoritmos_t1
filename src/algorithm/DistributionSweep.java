@@ -30,12 +30,12 @@ public class DistributionSweep {
 
     public void getIntersections(String filename) throws IOException {
         answerFile = new PointFileWriter(filename);
-        MergeSort xSort = new MergeSort(EAxis.X, inputFile);
+        MergeSort xSort = new MergeSort(EAxis.X, inputFile, "_x_");
         String xSortFilename = xSort.sort();
-        String ySortFilename = new MergeSort(EAxis.Y, inputFile).sort();
+        String ySortFilename = new MergeSort(EAxis.Y, inputFile, "_y_").sort();
         int verticalSegmentsNo = xSort.getVerticalSegmentsNo();
 
-        recursiveDistributionSweep(xSortFilename, 0, (int) inputFile.length(), ySortFilename, verticalSegmentsNo);
+        recursiveDistributionSweep(xSortFilename+".tmp", 0, (int) inputFile.length(), ySortFilename+".tmp", verticalSegmentsNo);
         answerFile.close();
     }
 /************************************************************************************************************************************************** *
@@ -425,7 +425,7 @@ public class DistributionSweep {
 
         for (int i = 0; i < slabs.length; i++) { // init slab dependant objects
             activeVerticals[i] = new ArrayDeque<>();
-            slabRecursiveSegments.set(i, new ArrayList<>());
+            slabRecursiveSegments.add(new ArrayList<>());
             horizontalNotComplete[i] = false;
         }
         int offsetY = 0;
