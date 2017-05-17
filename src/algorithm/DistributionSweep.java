@@ -44,13 +44,29 @@ public class DistributionSweep {
         }
         answerFile.close();
     }
+/************************************************************************************************************************************************** *
+ *          SECONDARY-MEMORY ALGORITHMS
+ ************************************************************************************************************************************************** *
+ */
 
+    /**
+     * @param xSortedFilename        Archivo donde estan los segmentos ordenados por X.
+     * @param beginOffset            Offset en bytes, desde donde se tiene que leer el archivo xSortedFilename
+     * @param endOffset              Offset en bytes, hasta donde se tiene que leer el archvio xSortedFilename
+     * @param ySortedFilename        Archivo dodne estan los segmentos ordenados por Y. Estos estan limitados al rango de offset por construccion.
+     * @param verticalSegmentsNumber Cantidad de segmentos verticales dentro del rango de offset
+     * @throws IOException
+     */
     private void recursiveDistributionSweep(String xSortedFilename, int beginOffset, int endOffset,
                                             String ySortedFilename, int verticalSegmentsNumber) throws IOException {
-        // it fits in RAM
-        //noinspection StatementWithEmptyBody
-        if (endOffset - beginOffset < M) {
-            // TODO
+
+        // if fits in RAM
+        if (getMemorySize(beginOffset, endOffset) < M) {
+            // prepares the data for primary memory usage
+            ArrayList<Segment> xSortedSegments = extractXSortedArray(xSortedFilename, beginOffset, endOffset);
+            ArrayList<Segment> ySortedSegments = extractYSortedArray(ySortedFilename);
+            localRecursiveDistributionSweep(xSortedSegments, 0, xSortedSegments.size()-1, ySortedSegments, verticalSegmentsNumber);
+
         } else {
             // Obs. max bytes offset 2^21 * 10*4 (each point is a double, 8 bytes + comas and points = 10 bytes)
             // => 8*10^7, it fit in an integer
@@ -77,15 +93,12 @@ public class DistributionSweep {
                 offsetY += page.bytesRead;
                 if (segments.size() == 0) break;
                 for (Segment segment : segments) {
-                    if (segment.isVertical())
-                    {// vertical segment
+                    if (segment.isVertical()) {// vertical segment
                         assert (segment.x1 == segment.x2);
                         //int index = getIndexSlab(segment.x1, slabs);
                         int index = getIndexSlab(segment, slabs, ySlabFiles);
                         addToActiveVerticals(activeVerticals[index], activeVerticalFile[index], segment);
-                    }
-                    else
-                    {// horizontal segment
+                    } else {// horizontal segment
                         assert (segment.y1 == segment.y2);
                         // search first and last slab where the segment is complete
                         int[] index = getIndexSegment(segment, slabs, ySlabFiles, horizontalNotComplete);
@@ -105,6 +118,50 @@ public class DistributionSweep {
         }
     }
 
+    private ArrayList<Segment> extractXSortedArray(String xSortedFilename, int beginOffset, int endOffset) throws FileNotFoundException {
+        ArrayList<Segment> xSortedArray = SegmentFileToArray(xSortedFilename, beginOffset, endOffset);
+        return xSortedArray;
+    }
+
+    private ArrayList<Segment> extractYSortedArray(String ySortedFilename) throws FileNotFoundException {
+        return SegmentFileToArray(ySortedFilename, 0, -1);
+    }
+
+    /**
+     * Read a File of Segments to an ArrayList. Supossing it fits in RAM!
+     *
+     * @param filename    name of the file
+     * @param beginOffset in bytes, where to start reading
+     * @param endOffset   in bytes, where to stop reading
+     * @return arrayList with the content of the file loaded in RAM.
+     * @throws FileNotFoundException
+     */
+    private ArrayList<Segment> SegmentFileToArray(String filename, int beginOffset, int endOffset) throws FileNotFoundException {
+        ArrayList<Segment> array = new ArrayList<>();
+
+        int offset = beginOffset;
+        RandomAccessFile raf = new RandomAccessFile(filename, "r");
+        while (true) {
+            UtilsIOSegments.ArrayBytesRead page = (endOffset < 0) ? UtilsIOSegments.readPage(raf, offset) : UtilsIOSegments.readPage(raf, offset, endOffset);
+            ArrayList<Segment> segments = page.segments;
+            offset += page.bytesRead;
+            if (segments.size() == 0) break;
+            array.addAll(segments);
+        }
+        return array;
+    }
+
+    /**
+     * Should return memory usage of the software, based on the attributes recieved.
+     *
+     * @param beginOffset In bytes, offset in segment file where to start reading.
+     * @param endOffset In bytes, offset in segment file where to stop reading.
+     * @return Size in bytes used by the software.
+     */
+    private int getMemorySize(int beginOffset, int endOffset) {
+        return endOffset - beginOffset;
+    }
+
     /**
      * Reads all the active verticals (list and file) between these slabs,
      * updates the active list and writes the intersections in the answer file
@@ -115,7 +172,8 @@ public class DistributionSweep {
      * @param slab_j             last slab where to check intersections
      * @param sweepLineHeight    Height of sweep line
      */
-    private void writeIntersections(ArrayDeque<Segment>[] activeVerticals, RandomAccessFile[] activeVerticalFile,
+    private void writeIntersections(ArrayDeque<Segment>[] activeVerticals,
+                                    RandomAccessFile[] activeVerticalFile,
                                     int slab_i, int slab_j, double sweepLineHeight) throws FileNotFoundException {
         for (int slab = slab_i; slab <= slab_j; slab++) {
             // new activeVerticalFile with updated content (After deletes)
@@ -157,22 +215,6 @@ public class DistributionSweep {
         }
     }
 
-    /**
-     * Load the deque with refreshed data from disk.
-     */
-    private void reloadLoadedActiveVerticals(ArrayDeque<Segment> activeVerticals, RandomAccessFile randomAccessFile) {
-        activeVerticals.clear();
-        int offset = 0;
-        while (activeVerticals.size() < MAX_SIZE_ACTIVE_LIST) {
-            UtilsIOSegments.ArrayBytesRead read = UtilsIOSegments.readPage(randomAccessFile, offset);
-            ArrayList<Segment> segments = read.segments;
-            if (segments.size() == 0) break;
-            offset += read.bytesRead;
-            for (Segment s : segments) {
-                activeVerticals.addLast(s);
-            }
-        }
-    }
 
     /**
      * Adds the segment to the active vertical list, if its full it writes in the file
@@ -255,8 +297,8 @@ public class DistributionSweep {
      * Search the slab where the x coordinate is placed.
      * This method should be called for vertical segments
      *
-     * @param segment   segment it x coordinate to be searched
-     * @param slabs List of Slab objects
+     * @param segment    segment it x coordinate to be searched
+     * @param slabs      List of Slab objects
      * @param YSlabFiles Where save vertical segments for recursion
      * @return The index or -1 if it's not between these slabs
      */
@@ -335,6 +377,213 @@ public class DistributionSweep {
         return slabs;
     }
 
+    /************************************************************************************************************************************************** *
+     *          PRIMARY-MEMORY ALGORITHMS
+     ************************************************************************************************************************************************** *
+     */
+
+
+    /**
+     * Ejecuta algoritmo 'Distribution Sweep' cuando los segmentos caben en memoria primaria.
+     *
+     * @param xSortedSegments        Lista de segmentos ordenados por X
+     * @param beginIndex             Indice de xSortedSegments desde el cual se debe a leer.
+     * @param endIndex              Indice de xSortedSegments hasta el cual se debe leer.
+     * @param ySortedSegments        Lista de segmentos ordenados por Y
+     * @param verticalSegmentsNumber Numero de segmentos verticales
+     *
+     *                               <p>
+     *                               N.A.: Es necesario dar los beginIndex y endIndex? Se podría cortar xSortedSegments.
+     */
+    private void localRecursiveDistributionSweep(ArrayList<Segment> xSortedSegments, int beginIndex, int endIndex,
+                                                 ArrayList<Segment> ySortedSegments,
+                                                 int verticalSegmentsNumber) {
+        Slab[] slabs = generateSlabsLocal(xSortedSegments, verticalSegmentsNumber, beginIndex, endIndex);
+
+        ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.length];
+        ArrayList<ArrayList<Segment>> slabRecursiveSegments = new ArrayList<>(slabs.length);
+        boolean[] horizontalNotComplete = new boolean[slabs.length];
+
+        for (int i = 0; i < slabs.length; i++) { // init slab dependant objects
+            activeVerticals[i] = new ArrayDeque<>();
+            slabRecursiveSegments.set(i, new ArrayList<>());
+            horizontalNotComplete[i] = false;
+        }
+        int offsetY = 0;
+        // sweep line
+
+        for (Segment segment : ySortedSegments) {
+            if (segment.isVertical()) {
+                int index = getIndexSlabLocal(segment, slabs);
+                slabRecursiveSegments.get(index).add(segment); // Guarda segmento vertical en slabRecursiveSegments para la llamada recursiva.
+                activeVerticals[index].add(segment); // No es necesario que se guarde dos veces, solo en active verticals
+                ySortedSegments.remove(segment); // hace espacio dado que queda en slabRecursiveSegment
+
+            } else {
+                assert (segment.y1 == segment.y2); // horizontal assert
+                int[] index = getIndexIntervalLocal(segment, slabs, slabRecursiveSegments, horizontalNotComplete);
+                if (index != null) {
+                    writeIntersectionsLocal(activeVerticals, index[0], index[1], segment.y1);
+                }
+            }
+        }
+        // recursive call
+
+        for (int i = 0; i < slabs.length; i++) {
+            if (horizontalNotComplete[i])
+                localRecursiveDistributionSweep(xSortedSegments, slabs[i].initialOffset, slabs[i].finalOffset,
+                        slabRecursiveSegments.get(i), slabs[i].verticalSegmentsNumber);
+        }
+    }
+
+    /**
+     * For the slabs between slab_i & slab_j, it writes in the output the intersections detected in its activeVerticals.
+     * SideEffect: delete inactive verticals (Out of sweepLine) from activeVerticals list.
+     *
+     * @param activeVerticals Active vertical list for every slab.
+     * @param slab_i          Fist slab to check intersection
+     * @param slab_j          Last slab to check intersection
+     * @param sweepLineHeight Y coord. of the actual sweep lane.
+     */
+    private void writeIntersectionsLocal(ArrayDeque<Segment>[] activeVerticals, int slab_i, int slab_j, double sweepLineHeight) {
+        for (int slab = slab_i; slab <= slab_j; slab++) {
+            for (Segment s : activeVerticals[slab]) { // for this slab, report intersections
+                if (s.y1 < sweepLineHeight) { // remove from active segments
+                    activeVerticals[slab].remove(s);
+                } else {
+                    answerFile.savePoint(s.x1, sweepLineHeight); // TODO: Considerar guardarlo directamente en buffer en RAM
+                }
+            }
+        }
+    }
+
+    /**
+     * Obtiene indices (i,j) de los slabs en que el segmento esta contenido completamente.
+     * <p>
+     * Side-effect: En los slab que el segmento no cubre completamente, delega la responsabilidad de detectarlo a la recursion.
+     * i.e. guarda el segmento en slabRecursiveSegments y setea horizontalNotComplete a 1.
+     * <p>
+     * Obs: El segmento que recibe es horizontal, por eso puede abarcar 1 o mas slabs.
+     *
+     * @param segment
+     * @param slabs
+     * @param slabRecursiveSegments
+     * @param horizontalNotComplete
+     * @return
+     */
+    private int[] getIndexIntervalLocal(Segment segment, Slab[] slabs, ArrayList<ArrayList<Segment>> slabRecursiveSegments, boolean[] horizontalNotComplete) {
+        double i = Math.min(segment.x1, segment.x2);
+        double j = Math.max(segment.x1, segment.x2);
+        int slab_i = getIndexSlab(i, slabs);
+        int slab_j = getIndexSlab(j, slabs);
+
+        if (slab_i == slab_j && !(i == slabs[slab_i].initX && j == slabs[slab_j].finalX)) {// case segment inside 1 slab not touching limits
+            slabRecursiveSegments.get(slab_i).add(segment);
+            horizontalNotComplete[slab_i] = true;
+            return null;
+        }
+        if (i > slabs[slab_i].initX && i < slabs[slab_i].finalX) { // not completely inside left slab
+            slabRecursiveSegments.get(slab_i).add(segment);
+            horizontalNotComplete[slab_i] = true;
+            slab_i++;
+        }
+        if (j > slabs[slab_j].initX && j < slabs[slab_j].finalX) {// not completely inside left slab
+            slabRecursiveSegments.get(slab_j).add(segment);
+            horizontalNotComplete[slab_j] = true;
+            slab_j--;
+        }
+        return new int[]{slab_i, slab_j};
+    }
+
+
+    /**
+     * Obtiene indice del slab al que pertenece el segment.
+     * Obs: Esta fun se invoca sobre segmentos verticales, i.e. caben un solo slab.
+     *
+     * @param segment Segmento al cual se desea obtener su slab
+     * @param slabs   Lista de slabs disponibles
+     * @return Indice del slab que pertenece el segment, en la lista: slabs.
+     */
+    private int getIndexSlabLocal(Segment segment, Slab[] slabs) {
+        assert (segment.x1 == segment.x2);
+        for (int j = 0; j < slabs.length; j++) {
+            if (segment.x1 >= slabs[j].initX && segment.x1 < slabs[j].finalX) {
+                return j;
+            }
+        }
+        return -1;
+    }
+
+    private Slab[] generateSlabsLocal(ArrayList<Segment> xSortedSegments, int verticalSegmentsNumber, int beginIndex, int endIndex) {
+        int k = M / B - 2;
+        int len = verticalSegmentsNumber / k;
+
+        Slab[] slabs = new Slab[k];
+
+
+        int verticalCounter = 0;
+        int slabCounter = 0;
+
+        int index_init = beginIndex;
+
+        double startX = Double.MAX_VALUE;
+        double lastXseen = Double.MIN_VALUE;
+        for (int index_current = beginIndex; index_current <= endIndex; index_current++) { // itera sobre el arreglo x, creando los slabs
+            // considerar eliminar el sistema de indices
+            Segment segment = xSortedSegments.get(index_current);
+            if (segment.isVertical()) {
+                if (verticalCounter == 0) {
+                    startX = segment.x1;
+                }
+                verticalCounter++;
+                lastXseen = segment.x1;
+
+                if (verticalCounter >= len) {
+                    slabs[slabCounter] = new Slab(index_init, index_current, startX, segment.x1, verticalCounter);
+                    // restart
+                    verticalCounter = 0;
+                    slabCounter++;
+                    index_init = index_current;
+                    startX = Double.MAX_VALUE;
+                }
+            }
+        }
+        if (verticalCounter != 0) { // add remaining to last slab
+            assert (slabCounter == k - 1); // if theory is good, should pass
+            slabs[slabCounter] = new Slab(
+                    slabs[slabCounter].initialOffset,
+                    endIndex,
+                    slabs[slabCounter].initX,
+                    lastXseen,
+                    slabs[slabCounter].verticalSegmentsNumber + verticalCounter);
+        }
+        return slabs;
+    }
+
+
+
+
+    /************************************************************************************************************************************************** *
+     *          AUXILIARY CLASSES
+     ************************************************************************************************************************************************** *
+     */
+
+
+    class Triple {
+        Object a, b, c;
+
+        Triple(Object a, Object b, Object c) {
+            this.a = a;
+            this.b = b;
+            this.c = c;
+        }
+
+    }
+
+/************************************************************************************************************************************************** *
+ *          UNUSED METHODS
+ ************************************************************************************************************************************************** *
+ */
 
     /**
      * Counts the lines in a file
@@ -366,4 +615,23 @@ public class DistributionSweep {
         file.close();
         return (linesCount == 0 && !empty) ? 1 : linesCount;
     }
+
+
+    /**
+     * Load the deque with refreshed data from disk.
+     */
+    private void reloadLoadedActiveVerticals(ArrayDeque<Segment> activeVerticals, RandomAccessFile randomAccessFile) {
+        activeVerticals.clear();
+        int offset = 0;
+        while (activeVerticals.size() < MAX_SIZE_ACTIVE_LIST) {
+            UtilsIOSegments.ArrayBytesRead read = UtilsIOSegments.readPage(randomAccessFile, offset);
+            ArrayList<Segment> segments = read.segments;
+            if (segments.size() == 0) break;
+            offset += read.bytesRead;
+            for (Segment s : segments) {
+                activeVerticals.addLast(s);
+            }
+        }
+    }
+
 }
