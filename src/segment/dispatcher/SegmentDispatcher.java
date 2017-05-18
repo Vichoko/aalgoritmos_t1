@@ -2,10 +2,12 @@ package segment.dispatcher;
 
 import segment.Segment;
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 
+import static java.lang.System.exit;
 import static utils.Constants.*;
 
 abstract class FileWriter{
@@ -17,6 +19,14 @@ abstract class FileWriter{
 
     FileWriter(String pathname) {
         this.pathname = pathname;
+        File f = new File(this.pathname);
+        try{
+            pw = new PrintWriter(f);
+        } catch (java.io.FileNotFoundException e){
+            System.err.print("FileWriter :: Couldn't open file to write.");
+            e.printStackTrace();
+            exit(-3);
+        }
         sb = new StringBuilder();
         elementsCount = 0;
     }

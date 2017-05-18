@@ -35,7 +35,7 @@ public class DistributionSweep {
         String ySortFilename = new MergeSort(EAxis.Y, inputFile, "_y_").sort();
         int verticalSegmentsNo = xSort.getVerticalSegmentsNo();
 
-        recursiveDistributionSweep(xSortFilename+".tmp", 0, (int) inputFile.length(), ySortFilename+".tmp", verticalSegmentsNo);
+        recursiveDistributionSweep(xSortFilename + ".tmp", 0, (int) inputFile.length(), ySortFilename + ".tmp", verticalSegmentsNo);
         answerFile.close();
     }
 /************************************************************************************************************************************************** *
@@ -52,6 +52,7 @@ public class DistributionSweep {
     private int getMemorySize(int beginOffset, int endOffset) {
         // si es muy poco, duplicarlo o triplicarlo.
         // n.a. Viendo el codigo calculo que si se acaba la ram, hay que triplicar este valor.
+        // n.a.2. me inclino que el tamaño podria ser el cuadrado de esto
         return endOffset - beginOffset;
     }
 
@@ -335,6 +336,8 @@ public class DistributionSweep {
     /**
      * Calculates offset (initial and final) for each slab in the file
      * Generates slabs with equal amount of vertical segments
+     * <p>
+     * NECESITA ACTUALIZARSE
      *
      * @param xSortedFilename File with segments
      * @param beginOffset     Place in the file to start slabs
@@ -344,9 +347,12 @@ public class DistributionSweep {
      */
     private Slab[] generateSlabs(String xSortedFilename, int verticalSegmentsNo, int beginOffset, int endOffset) throws IOException {
         int k = M / B - 2; // have to be <= m
-        Slab[] slabs = new Slab[k];
-
+        if (k > verticalSegmentsNo) {
+            k = verticalSegmentsNo;
+        }
         int len = verticalSegmentsNo / k;
+
+        Slab[] slabs = new Slab[k];
 
         RandomAccessFile xSegmentsSorted = new RandomAccessFile(xSortedFilename, "r");
         int offset = beginOffset;
@@ -356,7 +362,8 @@ public class DistributionSweep {
         int slabCounter = 0;
         int offset_init = offset;
         double startX = Double.MAX_VALUE;
-        double lastXseen = Double.MIN_VALUE;
+        Segment lastVerticalSegmentSeen = null;
+        double max_x = 0;
 
         while (true) {
             UtilsIOSegments.ArrayBytesRead page = UtilsIOSegments.readPage(xSegmentsSorted, offset, endOffset);
@@ -366,32 +373,39 @@ public class DistributionSweep {
             for (Segment s : segments) {
                 if (s.isVertical()) {
                     assert (s.x1 == s.x2); // if its vertical should pass
-                    if (verticalCounter == 0) { // first vertical segment in slab
-                        startX = s.x1;
-                    }
-                    lastXseen = s.x1; // short-term memory for outer scope
+                    lastVerticalSegmentSeen = s;
                     verticalCounter++;
 
                     if (verticalCounter >= len) { //last vertical segment in slab
-                        slabs[slabCounter] = new Slab(offset_init, offset, startX, s.x1, verticalCounter);
+                        slabs[slabCounter] = new Slab(offset_init, offset, startX, s.x1, verticalCounter, s);
                         //restart
                         verticalCounter = 0;
                         slabCounter++;
                         offset_init = offset;
-                        startX = Double.MAX_VALUE;
+                        startX = s.x1;
                     }
+                }
+                // find max_x to finish last slab
+                double curr_maxx = Math.max(s.x1, s.x2);
+                if (curr_maxx > max_x) {
+                    max_x = curr_maxx;
                 }
             }
         }
-        if (verticalCounter != 0) { // add remaining to last slab
-            assert (slabCounter == k - 1); // if theory is good, should pass
-            slabs[slabCounter] = new Slab(
-                    slabs[slabCounter].initialOffset,
-                    offset,
-                    slabs[slabCounter].initX,
-                    lastXseen,
-                    slabs[slabCounter].verticalSegmentsNumber + verticalCounter);
+
+
+        if (verticalCounter == 0) {
+            slabCounter -= 1;
         }
+
+        slabs[slabCounter] = new Slab(
+                slabs[slabCounter].initialOffset,
+                offset,
+                slabs[slabCounter].initX,
+                max_x + 1,
+                slabs[slabCounter].verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen);
+
+
 
         return slabs;
     }
@@ -436,7 +450,6 @@ public class DistributionSweep {
                 int index = getIndexSlab(segment, slabs);
                 slabRecursiveSegments.get(index).add(segment); // Guarda segmento vertical en slabRecursiveSegments para la llamada recursiva. Se mantiene orden por Y.
                 activeVerticals[index].add(segment); // Optimizacion: No es necesario que se guarde dos veces, solo en active verticals
-                ySortedSegments.remove(segment); // hace espacio dado que queda en slabRecursiveSegment
 
             } else {
                 assert (segment.y1 == segment.y2); // horizontal assert
@@ -448,10 +461,42 @@ public class DistributionSweep {
         }
         // recursive call
 
-        for (int i = 0; i < slabs.length; i++) {
-            if (horizontalNotComplete[i])
-                localRecursiveDistributionSweep(xSortedSegments, slabs[i].initialOffset, slabs[i].finalOffset,
-                        slabRecursiveSegments.get(i), slabs[i].verticalSegmentsNumber);
+        if (slabs.length <= xSortedSegments.size()) { // finish slabs with brute force
+            for (int i = 0; i < slabs.length; i++) {
+                if (horizontalNotComplete[i])
+                    fastReduct(slabs[i], slabRecursiveSegments.get(i));
+            }
+        } else {
+            for (int i = 0; i < slabs.length; i++) {
+                if (horizontalNotComplete[i])
+                    localRecursiveDistributionSweep(xSortedSegments, slabs[i].initialOffset, slabs[i].finalOffset,
+                            slabRecursiveSegments.get(i), slabs[i].verticalSegmentsNumber);
+            }
+        }
+
+    }
+
+    /**
+     * Finishes recursion calculating intersection by bruteforce.
+     *
+     * @param slab     Slab that contains, by construction, one segment.
+     * @param segments Segments to compare for intersections.
+     */
+    private void fastReduct(Slab slab, ArrayList<Segment> segments) {
+        assert (slab.verticalSegmentsNumber <= 1);
+        Segment fSegment = slab.getFinalSegment();
+        assert (fSegment.isVertical());
+        for (Segment s : segments) {
+            if (s.isHorizontal()) {
+                double xi = Math.min(s.x1, s.x2);
+                double xj = Math.max(s.x1, s.x2);
+                double yi = Math.min(fSegment.y1, fSegment.y2);
+                double yj = Math.max(fSegment.y1, fSegment.y2);
+                if (fSegment.x1 >= xi && fSegment.x1 <= xj && s.y1 >= yi && s.y1 <= yj) {
+                    // hay interseccion
+                    answerFile.savePoint(fSegment.x1, s.y1);
+                }
+            }
         }
     }
 
@@ -516,7 +561,10 @@ public class DistributionSweep {
 
 
     private Slab[] generateSlabsLocal(ArrayList<Segment> xSortedSegments, int verticalSegmentsNumber, int beginIndex, int endIndex) {
-        int k = M / B - 2;
+        int k = M / B - 2; // if k > len k = len. rest: debe haber al menos 1 vertical por slab
+        if (k > verticalSegmentsNumber) {
+            k = verticalSegmentsNumber;
+        }
         int len = verticalSegmentsNumber / k;
 
         Slab[] slabs = new Slab[k];
@@ -527,40 +575,45 @@ public class DistributionSweep {
 
         int index_init = beginIndex;
 
-        double startX = Double.MAX_VALUE;
-        double lastXseen = Double.MIN_VALUE;
+        double startX = 0;
+        double max_x = 0;
+        Segment lastVerticalSegmentSeen = null;
         for (int index_current = beginIndex; index_current <= endIndex; index_current++) { // itera sobre el arreglo x, creando los slabs
             // considerar eliminar el sistema de indices
             Segment segment = xSortedSegments.get(index_current);
             if (segment.isVertical()) {
-                if (verticalCounter == 0) {
-                    startX = segment.x1;
-                }
+                lastVerticalSegmentSeen = segment;
                 verticalCounter++;
-                lastXseen = segment.x1;
 
                 if (verticalCounter >= len) {
-                    slabs[slabCounter] = new Slab(index_init, index_current, startX, segment.x1, verticalCounter);
+                    slabs[slabCounter] = new Slab(index_init, index_current, startX, segment.x1, verticalCounter, segment);
                     // restart
                     verticalCounter = 0;
                     slabCounter++;
                     index_init = index_current;
-                    startX = Double.MAX_VALUE;
+                    startX = segment.x1;
                 }
             }
+            // find max_x to finish last slab
+            double curr_maxx = Math.max(segment.x1, segment.x2);
+            if (curr_maxx > max_x) {
+                max_x = curr_maxx;
+            }
         }
-        if (verticalCounter != 0) { // add remaining to last slab
-            assert (slabCounter == k - 1); // if theory is good, should pass
-            slabs[slabCounter] = new Slab(
-                    slabs[slabCounter].initialOffset,
-                    endIndex,
-                    slabs[slabCounter].initX,
-                    lastXseen,
-                    slabs[slabCounter].verticalSegmentsNumber + verticalCounter);
+        if (verticalCounter == 0) {
+            slabCounter -= 1;
         }
+
+        slabs[slabCounter] = new Slab(
+                slabs[slabCounter].initialOffset,
+                endIndex,
+                slabs[slabCounter].initX,
+                max_x + 1,
+                slabs[slabCounter].verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen);
+
+
         return slabs;
     }
-
 
 
 /************************************************************************************************************************************************** *

@@ -13,7 +13,7 @@ public class first {
     public static void main(String[] args) throws IOException {
         // Variables
         // TODO: Parsing?
-        int m_segmentQuantity = (int) Math.pow(2, 9);
+        int m_segmentQuantity = (int) Math.pow(2, 20);
         Constants.EDistribution m_segmentDistribution = Constants.EDistribution.NORMAL;
         double m_segmentClassBalance = 0.50;
 
@@ -23,7 +23,7 @@ public class first {
         File originalSegmentsFile = new File(originalSegmentsFileName);
 
         DistributionSweep ds = new DistributionSweep(originalSegmentsFile);
-        String outFileName = "t_first#" +   System.currentTimeMillis();
+        String outFileName = "t_first#" +   System.currentTimeMillis() + ".txt";
         ds.getIntersections(outFileName);
 
         // check outFileName for intersections
