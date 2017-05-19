@@ -11,6 +11,7 @@ import utils.*;
 import static utils.Constants.*;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 
@@ -64,9 +65,9 @@ public class DistributionSweep {
      * @param slabs List of Slab objects
      * @return The index or -1 if it's not between these slabs
      */
-    private int getIndexSlab(double i, Slab[] slabs) {
-        for (int j = 0; j < slabs.length; j++) {
-            if (i >= slabs[j].initX && i < slabs[j].finalX) {
+    private int getIndexSlab(double i, ArrayList<Slab> slabs) {
+        for (int j = 0; j < slabs.size(); j++) {
+            if (i >= slabs.get(j).initX && i < slabs.get(j).finalX) {
                 return j;
             }
         }
@@ -81,10 +82,10 @@ public class DistributionSweep {
      * @param slabs   List of Slab objects
      * @return The index or -1 if it's not between these slabs
      */
-    private int getIndexSlab(Segment segment, Slab[] slabs) {
+    private int getIndexSlab(Segment segment, ArrayList<Slab> slabs) {
         assert (segment.x1 == segment.x2); // vertical check
-        for (int j = 0; j < slabs.length; j++) {
-            if (segment.x1 >= slabs[j].initX && segment.x1 < slabs[j].finalX) {
+        for (int j = 0; j < slabs.size(); j++) {
+            if (segment.x1 >= slabs.get(j).initX && segment.x1 < slabs.get(j).finalX) {
                 return j;
             }
         }
@@ -118,13 +119,13 @@ public class DistributionSweep {
         } else {
             // Obs. max bytes offset 2^21 * 10*4 (each point is a double, 8 bytes + comas and points = 10 bytes)
             // => 8*10^7, it fit in an integer
-            Slab[] slabs = generateSlabs(xSortedFilename, verticalSegmentsNumber, beginOffset, endOffset);
+            ArrayList<Slab> slabs = generateSlabs(xSortedFilename, verticalSegmentsNumber, beginOffset, endOffset);
             // def slab dependant objects
-            ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.length];
-            RandomAccessFile[] activeVerticalFile = new RandomAccessFile[slabs.length];
-            SegmentDispatcher[] ySlabFiles = new SegmentDispatcher[slabs.length];
-            boolean[] horizontalNotComplete = new boolean[slabs.length];
-            for (int i = 0; i < slabs.length; i++) { // init slab dependant objects
+            ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.size()];
+            RandomAccessFile[] activeVerticalFile = new RandomAccessFile[slabs.size()];
+            SegmentDispatcher[] ySlabFiles = new SegmentDispatcher[slabs.size()];
+            boolean[] horizontalNotComplete = new boolean[slabs.size()];
+            for (int i = 0; i < slabs.size(); i++) { // init slab dependant objects
                 activeVerticals[i] = new ArrayDeque<>();
                 activeVerticalFile[i] = new RandomAccessFile(new File("activeVertical_" + i + ".txt"), "rw");
                 ySlabFiles[i] = new SegmentDispatcherTemporary("yHorizontal_" + i);
@@ -157,12 +158,12 @@ public class DistributionSweep {
                 }
             }
             // recursive call
-            for (int i = 0; i < slabs.length; i++)
+            for (int i = 0; i < slabs.size(); i++)
                 ySlabFiles[i].close();
-            for (int i = 0; i < slabs.length; i++) {
+            for (int i = 0; i < slabs.size(); i++) {
                 if (horizontalNotComplete[i])
-                    recursiveDistributionSweep(xSortedFilename, slabs[i].initialOffset, slabs[i].finalOffset,
-                            ySlabFiles[i].getPathname(), slabs[i].verticalSegmentsNumber);
+                    recursiveDistributionSweep(xSortedFilename, slabs.get(i).initialOffset, slabs.get(i).finalOffset,
+                            ySlabFiles[i].getPathname(), slabs.get(i).verticalSegmentsNumber);
             }
         }
     }
@@ -309,23 +310,23 @@ public class DistributionSweep {
      * @param horizontalNotComplete Where set to true the slabs that have segments not complete
      * @return first and last index where the segment is complete, if none then null
      */
-    private int[] getIndexSegment(Segment segment, Slab[] slabs, SegmentDispatcher[] yHorizontalFiles,
+    private int[] getIndexSegment(Segment segment, ArrayList<Slab> slabs, SegmentDispatcher[] yHorizontalFiles,
                                   boolean[] horizontalNotComplete) {
         double i = Math.min(segment.x1, segment.x2);
         double j = Math.max(segment.x1, segment.x2);
         int slab_i = getIndexSlab(i, slabs);
         int slab_j = getIndexSlab(j, slabs);
-        if (slab_i == slab_j && !(i == slabs[slab_i].initX && j == slabs[slab_j].finalX)) {// case segment inside 1 slab not touching limits
+        if (slab_i == slab_j && !(i == slabs.get(slab_i).initX && j == slabs.get(slab_j).finalX)) {// case segment inside 1 slab not touching limits
             yHorizontalFiles[slab_i].saveSegment(segment);
             horizontalNotComplete[slab_i] = true;
             return null;
         }
-        if (i > slabs[slab_i].initX && i < slabs[slab_i].finalX) { // not completely inside left slab
+        if (i > slabs.get(slab_i).initX && i < slabs.get(slab_i).finalX) { // not completely inside left slab
             yHorizontalFiles[slab_i].saveSegment(segment);
             horizontalNotComplete[slab_i] = true;
             slab_i++;
         }
-        if (j > slabs[slab_j].initX && j < slabs[slab_j].finalX) {// not completely inside left slab
+        if (j > slabs.get(slab_j).initX && j < slabs.get(slab_j).finalX) {// not completely inside left slab
             yHorizontalFiles[slab_j].saveSegment(segment);
             horizontalNotComplete[slab_j] = true;
             slab_j--;
@@ -345,14 +346,14 @@ public class DistributionSweep {
      * @return Array with slabs, each one with initial offset in 0 and final offset in 1
      * @throws IOException Error reading the file
      */
-    private Slab[] generateSlabs(String xSortedFilename, int verticalSegmentsNo, int beginOffset, int endOffset) throws IOException {
+    private ArrayList<Slab> generateSlabs(String xSortedFilename, int verticalSegmentsNo, int beginOffset, int endOffset) throws IOException {
         int k = M / B - 2; // have to be <= m
         if (k > verticalSegmentsNo) {
             k = verticalSegmentsNo;
         }
         int len = verticalSegmentsNo / k;
 
-        Slab[] slabs = new Slab[k];
+        ArrayList<Slab> slabs = new ArrayList<Slab>();
 
         RandomAccessFile xSegmentsSorted = new RandomAccessFile(xSortedFilename, "r");
         int offset = beginOffset;
@@ -377,7 +378,7 @@ public class DistributionSweep {
                     verticalCounter++;
 
                     if (verticalCounter >= len) { //last vertical segment in slab
-                        slabs[slabCounter] = new Slab(offset_init, offset, startX, s.x1, verticalCounter, s);
+                        slabs.set(slabCounter, new Slab(offset_init, offset, startX, s.x1, verticalCounter, s));
                         //restart
                         verticalCounter = 0;
                         slabCounter++;
@@ -398,12 +399,12 @@ public class DistributionSweep {
             slabCounter -= 1;
         }
 
-        slabs[slabCounter] = new Slab(
-                slabs[slabCounter].initialOffset,
+        slabs.set(slabCounter, new Slab(
+                slabs.get(slabCounter).initialOffset,
                 offset,
-                slabs[slabCounter].initX,
+                slabs.get(slabCounter).initX,
                 max_x + 1,
-                slabs[slabCounter].verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen);
+                slabs.get(slabCounter).verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen));
 
 
 
@@ -431,13 +432,13 @@ public class DistributionSweep {
     private void localRecursiveDistributionSweep(ArrayList<Segment> xSortedSegments, int beginIndex, int endIndex,
                                                  ArrayList<Segment> ySortedSegments,
                                                  int verticalSegmentsNumber) {
-        Slab[] slabs = generateSlabsLocal(xSortedSegments, verticalSegmentsNumber, beginIndex, endIndex);
+        ArrayList<Slab> slabs = generateSlabsLocal(xSortedSegments, verticalSegmentsNumber, beginIndex, endIndex);
 
-        ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.length];
-        ArrayList<ArrayList<Segment>> slabRecursiveSegments = new ArrayList<>(slabs.length);
-        boolean[] horizontalNotComplete = new boolean[slabs.length];
+        ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.size()];
+        ArrayList<ArrayList<Segment>> slabRecursiveSegments = new ArrayList<>(slabs.size());
+        boolean[] horizontalNotComplete = new boolean[slabs.size()];
 
-        for (int i = 0; i < slabs.length; i++) { // init slab dependant objects
+        for (int i = 0; i < slabs.size(); i++) { // init slab dependant objects
             activeVerticals[i] = new ArrayDeque<>();
             slabRecursiveSegments.add(new ArrayList<>());
             horizontalNotComplete[i] = false;
@@ -461,16 +462,16 @@ public class DistributionSweep {
         }
         // recursive call
 
-        if (slabs.length <= xSortedSegments.size()) { // finish slabs with brute force
-            for (int i = 0; i < slabs.length; i++) {
+        if (slabs.size() <= verticalSegmentsNumber) { // finish slabs with brute force
+            for (int i = 0; i < slabs.size(); i++) {
                 if (horizontalNotComplete[i])
-                    fastReduct(slabs[i], slabRecursiveSegments.get(i));
+                    fastReduct(slabs.get(i), slabRecursiveSegments.get(i));
             }
         } else {
-            for (int i = 0; i < slabs.length; i++) {
+            for (int i = 0; i < slabs.size(); i++) {
                 if (horizontalNotComplete[i])
-                    localRecursiveDistributionSweep(xSortedSegments, slabs[i].initialOffset, slabs[i].finalOffset,
-                            slabRecursiveSegments.get(i), slabs[i].verticalSegmentsNumber);
+                    localRecursiveDistributionSweep(xSortedSegments, slabs.get(i).initialOffset, slabs.get(i).finalOffset,
+                            slabRecursiveSegments.get(i), slabs.get(i).verticalSegmentsNumber);
             }
         }
 
@@ -535,23 +536,23 @@ public class DistributionSweep {
      * @param horizontalNotComplete
      * @return
      */
-    private int[] getIndexIntervalLocal(Segment segment, Slab[] slabs, ArrayList<ArrayList<Segment>> slabRecursiveSegments, boolean[] horizontalNotComplete) {
+    private int[] getIndexIntervalLocal(Segment segment, ArrayList<Slab> slabs, ArrayList<ArrayList<Segment>> slabRecursiveSegments, boolean[] horizontalNotComplete) {
         double i = Math.min(segment.x1, segment.x2);
         double j = Math.max(segment.x1, segment.x2);
         int slab_i = getIndexSlab(i, slabs);
         int slab_j = getIndexSlab(j, slabs);
 
-        if (slab_i == slab_j && !(i == slabs[slab_i].initX && j == slabs[slab_j].finalX)) {// case segment inside 1 slab not touching limits
+        if (slab_i == slab_j && !(i == slabs.get(slab_i).initX && j == slabs.get(slab_j).finalX)) {// case segment inside 1 slab not touching limits
             slabRecursiveSegments.get(slab_i).add(segment);
             horizontalNotComplete[slab_i] = true;
             return null;
         }
-        if (i > slabs[slab_i].initX && i < slabs[slab_i].finalX) { // not completely inside left slab
+        if (i > slabs.get(slab_i).initX && i < slabs.get(slab_i).finalX) { // not completely inside left slab
             slabRecursiveSegments.get(slab_i).add(segment);
             horizontalNotComplete[slab_i] = true;
             slab_i++;
         }
-        if (j > slabs[slab_j].initX && j < slabs[slab_j].finalX) {// not completely inside left slab
+        if (j > slabs.get(slab_j).initX && j < slabs.get(slab_j).finalX) {// not completely inside left slab
             slabRecursiveSegments.get(slab_j).add(segment);
             horizontalNotComplete[slab_j] = true;
             slab_j--;
@@ -560,14 +561,14 @@ public class DistributionSweep {
     }
 
 
-    private Slab[] generateSlabsLocal(ArrayList<Segment> xSortedSegments, int verticalSegmentsNumber, int beginIndex, int endIndex) {
-        int k = M / B - 2; // if k > len k = len. rest: debe haber al menos 1 vertical por slab
+    private ArrayList<Slab> generateSlabsLocal(ArrayList<Segment> xSortedSegments, int verticalSegmentsNumber, int beginIndex, int endIndex) {
+        int k = M / (3*B); // if k > len k = len. rest: debe haber al menos 1 vertical por slab
         if (k > verticalSegmentsNumber) {
             k = verticalSegmentsNumber;
         }
-        int len = verticalSegmentsNumber / k;
-
-        Slab[] slabs = new Slab[k];
+        int len = (int) Math.ceil(verticalSegmentsNumber / k);
+        System.out.println("K: " + k + ", len: " + len + ", verticales: " + verticalSegmentsNumber);
+        ArrayList<Slab> slabs = new ArrayList<>();
 
 
         int verticalCounter = 0;
@@ -584,9 +585,8 @@ public class DistributionSweep {
             if (segment.isVertical()) {
                 lastVerticalSegmentSeen = segment;
                 verticalCounter++;
-
                 if (verticalCounter >= len) {
-                    slabs[slabCounter] = new Slab(index_init, index_current, startX, segment.x1, verticalCounter, segment);
+                    slabs.add(new Slab(index_init, index_current, startX, segment.x1, verticalCounter, segment));
                     // restart
                     verticalCounter = 0;
                     slabCounter++;
@@ -600,16 +600,13 @@ public class DistributionSweep {
                 max_x = curr_maxx;
             }
         }
-        if (verticalCounter == 0) {
-            slabCounter -= 1;
-        }
 
-        slabs[slabCounter] = new Slab(
-                slabs[slabCounter].initialOffset,
+        slabs.set(slabs.size()-1, new Slab(
+                slabs.get(slabs.size()-1).initialOffset,
                 endIndex,
-                slabs[slabCounter].initX,
+                slabs.get(slabs.size()-1).initX,
                 max_x + 1,
-                slabs[slabCounter].verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen);
+                slabs.get(slabs.size()-1).verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen));
 
 
         return slabs;

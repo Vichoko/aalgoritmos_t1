@@ -13,7 +13,7 @@ public class first {
     public static void main(String[] args) throws IOException {
         // Variables
         // TODO: Parsing?
-        int m_segmentQuantity = (int) Math.pow(2, 20);
+        int m_segmentQuantity = (int) Math.pow(2, 18);
         Constants.EDistribution m_segmentDistribution = Constants.EDistribution.NORMAL;
         double m_segmentClassBalance = 0.50;
 
