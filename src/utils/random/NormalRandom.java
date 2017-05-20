@@ -20,7 +20,7 @@ public class NormalRandom implements IRandom {
     public double getRandom(){
         double number = mean + rand.nextGaussian()*variance;
         // avoid coordinate out of range
-        while (number > X_MAX){
+        while (number > X_MAX || number < 0){
             number = mean + rand.nextGaussian()*variance;
         }
         return number;

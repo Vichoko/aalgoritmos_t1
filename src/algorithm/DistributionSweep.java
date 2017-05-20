@@ -123,14 +123,22 @@ public class DistributionSweep {
             // def slab dependant objects
             ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.size()];
             RandomAccessFile[] activeVerticalFile = new RandomAccessFile[slabs.size()];
-            SegmentDispatcher[] ySlabFiles = new SegmentDispatcher[slabs.size()];
+            // need auxiliary activeVertical for deletions
+            ArrayDeque<Segment>[] activeVerticalsAux = new ArrayDeque[slabs.size()];
+            RandomAccessFile[] activeVerticalFilesAux = new RandomAccessFile[slabs.size()];
+            SegmentDispatcher[] yRecursiveSlabFiles = new SegmentDispatcher[slabs.size()];
             boolean[] horizontalNotComplete = new boolean[slabs.size()];
             for (int i = 0; i < slabs.size(); i++) { // init slab dependant objects
                 activeVerticals[i] = new ArrayDeque<>();
                 activeVerticalFile[i] = new RandomAccessFile(new File("activeVertical_" + i + ".txt"), "rw");
-                ySlabFiles[i] = new SegmentDispatcherTemporary("yHorizontal_" + i);
 
-                ySlabFiles[i].setMaxBytesRAM(MAX_SIZE_DISPATCHER);
+                activeVerticalsAux[i] = new ArrayDeque<>();
+                activeVerticalFilesAux[i] = new RandomAccessFile(new File("activeVertical_" + (slabs.size() + i) + ".txt"), "rw");
+
+
+                yRecursiveSlabFiles[i] = new SegmentDispatcherTemporary("yRecursiveSlabFiles" + i);
+
+                yRecursiveSlabFiles[i].setMaxBytesRAM(MAX_SIZE_DISPATCHER);
                 horizontalNotComplete[i] = false;
             }
             RandomAccessFile ySegmentsSorted = new RandomAccessFile(ySortedFilename, "r");
@@ -146,24 +154,24 @@ public class DistributionSweep {
                         assert (segment.x1 == segment.x2);
                         //int index = getIndexSlab(segment.x1, slabs);
                         int index = getIndexSlab(segment, slabs);
-                        ySlabFiles[index].saveSegment(segment); // save the segment for recursive call
+                        yRecursiveSlabFiles[index].saveSegment(segment); // save the segment for recursive call
                         addToActiveVerticals(activeVerticals[index], activeVerticalFile[index], segment);
                     } else {// horizontal segment
                         assert (segment.y1 == segment.y2);
                         // search first and last slab where the segment is complete
-                        int[] index = getIndexSegment(segment, slabs, ySlabFiles, horizontalNotComplete);
+                        int[] index = getIndexSegment(segment, slabs, yRecursiveSlabFiles, horizontalNotComplete);
                         if (index != null)
-                            writeIntersections(activeVerticals, activeVerticalFile, index[0], index[1], segment.y1);
+                            writeIntersections(activeVerticals, activeVerticalFile, activeVerticalsAux, activeVerticalFilesAux, index[0], index[1], segment.y1);
                     }
                 }
             }
             // recursive call
             for (int i = 0; i < slabs.size(); i++)
-                ySlabFiles[i].close();
+                yRecursiveSlabFiles[i].close();
             for (int i = 0; i < slabs.size(); i++) {
                 if (horizontalNotComplete[i])
                     recursiveDistributionSweep(xSortedFilename, slabs.get(i).initialOffset, slabs.get(i).finalOffset,
-                            ySlabFiles[i].getPathname(), slabs.get(i).verticalSegmentsNumber);
+                            yRecursiveSlabFiles[i].getPathname(), slabs.get(i).verticalSegmentsNumber);
             }
         }
     }
@@ -225,51 +233,55 @@ public class DistributionSweep {
      * updates the active list and writes the intersections in the answer file
      *
      * @param activeVerticals    List with active verticals
-     * @param activeVerticalFile File with active verticals
+     * @param activeVerticalFiles File with active verticals
      * @param slab_i             first slab where to check intersections
      * @param slab_j             last slab where to check intersections
      * @param sweepLineHeight    Height of sweep line
      */
     private void writeIntersections(ArrayDeque<Segment>[] activeVerticals,
-                                    RandomAccessFile[] activeVerticalFile,
-                                    int slab_i, int slab_j, double sweepLineHeight) throws FileNotFoundException {
+                                    RandomAccessFile[] activeVerticalFiles,
+                                    ArrayDeque<Segment>[] activeVerticalsAux,
+                                    RandomAccessFile[] activeVerticalFilesAux,
+                                    int slab_i, int slab_j, double sweepLineHeight) throws IOException {
         for (int slab = slab_i; slab <= slab_j; slab++) {
-            // new activeVerticalFile with updated content (After deletes)
-            ArrayDeque<Segment> newActiveVertical = new ArrayDeque<>();
-            RandomAccessFile newActiveVerticalFile = new RandomAccessFile(
-                    new File("activeVertical_" + Integer.toString(slab) + Long.toString(System.currentTimeMillis())),
-                    "rw");
+            // activeVerticalFileAux with updated content (After deletes)
 
             // check verticals in RAM
             for (Segment s : activeVerticals[slab]) {
-                if (s.y1 < sweepLineHeight) { // remove from active segments
-                    activeVerticals[slab].remove(s);
-                } else {
+                double y = Math.max(s.y1, s.y2);
+                if (y >= sweepLineHeight) { // save intersection & mantain in active segments
                     answerFile.savePoint(s.x1, sweepLineHeight);
-                    addToActiveVerticals(newActiveVertical, newActiveVerticalFile, s); // add to updated newActiveVertical list
+                    addToActiveVerticals(activeVerticalsAux[slab],
+                            activeVerticalFilesAux[slab], s); // add to updated newActiveVertical list
                 }
             }
             // check verticals in disk
             int offset = 0;
             while (true) {
-                UtilsIOSegments.ArrayBytesRead read = UtilsIOSegments.readPage(activeVerticalFile[slab], offset);
+                UtilsIOSegments.ArrayBytesRead read = UtilsIOSegments.readPage(activeVerticalFiles[slab], offset);
                 ArrayList<Segment> segments = read.segments;
                 if (segments.size() == 0) break;
                 offset += read.bytesRead;
                 for (Segment s : segments) {
-                    if (s.y1 < sweepLineHeight) {// remove from active segments
-                        segments.remove(s);
-                    } else {
+                    double y = Math.max(s.y1, s.y2);
+                    if (y >= sweepLineHeight) {
                         answerFile.savePoint(s.x1, sweepLineHeight);
-                        addToActiveVerticals(newActiveVertical, newActiveVerticalFile, s); // add to updated newActiveVertical list
+                        addToActiveVerticals(activeVerticalsAux[slab],
+                                activeVerticalFilesAux[slab], s); // add to updated newActiveVertical list
                     }
                 }
 
                 // idea traer buffer a RAM, despues devolverlo a disco, actualizado
             }
-            // update references
-            activeVerticalFile[slab] = newActiveVerticalFile;
-            activeVerticals[slab] = newActiveVertical;
+            // save reference
+            RandomAccessFile swapAuxFile = activeVerticalFiles[slab];
+            // update references with updated information
+            activeVerticalFiles[slab] = activeVerticalFilesAux[slab];
+            activeVerticals[slab] = activeVerticalsAux[slab];
+            // update aux references & blank old data
+            activeVerticalFilesAux[slab] = swapAuxFile;
+            activeVerticalFilesAux[slab].setLength(0);
+            activeVerticalsAux[slab] = new ArrayDeque<>();
         }
     }
 
@@ -300,6 +312,7 @@ public class DistributionSweep {
         }
         activeVertical.add(segment);
     }
+
 
     /**
      * Returns slabs index where the segment is complete
@@ -360,9 +373,8 @@ public class DistributionSweep {
 
         // slab creation vars
         int verticalCounter = 0;
-        int slabCounter = 0;
         int offset_init = offset;
-        double startX = Double.MAX_VALUE;
+        double startX = 0;
         Segment lastVerticalSegmentSeen = null;
         double max_x = 0;
 
@@ -378,10 +390,9 @@ public class DistributionSweep {
                     verticalCounter++;
 
                     if (verticalCounter >= len) { //last vertical segment in slab
-                        slabs.set(slabCounter, new Slab(offset_init, offset, startX, s.x1, verticalCounter, s));
+                        slabs.add(new Slab(offset_init, offset, startX, s.x1, verticalCounter, s));
                         //restart
                         verticalCounter = 0;
-                        slabCounter++;
                         offset_init = offset;
                         startX = s.x1;
                     }
@@ -395,16 +406,13 @@ public class DistributionSweep {
         }
 
 
-        if (verticalCounter == 0) {
-            slabCounter -= 1;
-        }
 
-        slabs.set(slabCounter, new Slab(
-                slabs.get(slabCounter).initialOffset,
+        slabs.set(slabs.size()-1, new Slab(
+                slabs.get(slabs.size()-1).initialOffset,
                 offset,
-                slabs.get(slabCounter).initX,
+                slabs.get(slabs.size()-1).initX,
                 max_x + 1,
-                slabs.get(slabCounter).verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen));
+                slabs.get(slabs.size()-1).verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen));
 
 
 
@@ -567,12 +575,11 @@ public class DistributionSweep {
             k = verticalSegmentsNumber;
         }
         int len = (int) Math.ceil(verticalSegmentsNumber / k);
-        System.out.println("K: " + k + ", len: " + len + ", verticales: " + verticalSegmentsNumber);
+        System.out.println("K: " + k + ", len: " + len + ", verticales: " + verticalSegmentsNumber + ";; beginIndex: " + beginIndex + " endIndex: " + endIndex);
         ArrayList<Slab> slabs = new ArrayList<>();
 
 
         int verticalCounter = 0;
-        int slabCounter = 0;
 
         int index_init = beginIndex;
 
@@ -583,13 +590,14 @@ public class DistributionSweep {
             // considerar eliminar el sistema de indices
             Segment segment = xSortedSegments.get(index_current);
             if (segment.isVertical()) {
+                System.out.print("V ");
                 lastVerticalSegmentSeen = segment;
                 verticalCounter++;
                 if (verticalCounter >= len) {
+                    System.out.println("su slab");
                     slabs.add(new Slab(index_init, index_current, startX, segment.x1, verticalCounter, segment));
                     // restart
                     verticalCounter = 0;
-                    slabCounter++;
                     index_init = index_current;
                     startX = segment.x1;
                 }

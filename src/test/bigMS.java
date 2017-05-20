@@ -1,17 +1,19 @@
 package test;
 
 import algorithm.DistributionSweep;
+import algorithm.sort.MergeSort;
 import segment.SegmentGenerator;
 import utils.Constants;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 
 import static utils.Constants.TOTAL_SEGMENTS;
 
 /**
  * primera prueba
  */
-public class first {
+public class bigMS {
     public static void main(String[] args) throws IOException {
         // Variables
         // TODO: Parsing?
@@ -24,10 +26,9 @@ public class first {
         String originalSegmentsFileName = sg.generateSegments();
         File originalSegmentsFile = new File(originalSegmentsFileName);
 
-        DistributionSweep ds = new DistributionSweep(originalSegmentsFile);
-        String outFileName = "t_first#" +   System.currentTimeMillis() + ".txt";
-        ds.getIntersections(outFileName);
+        MergeSort xSort = new MergeSort(Constants.EAxis.X, originalSegmentsFile, "_x_");
 
+        System.out.print(xSort.sort());
         // check outFileName for intersections
     }
 
