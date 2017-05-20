@@ -171,7 +171,7 @@ public class DistributionSweep {
             for (int i = 0; i < slabs.size(); i++) {
                 if (horizontalNotComplete[i])
                     recursiveDistributionSweep(xSortedFilename, slabs.get(i).initialOffset, slabs.get(i).finalOffset,
-                            yRecursiveSlabFiles[i].getPathname(), slabs.get(i).verticalSegmentsNumber);
+                            yRecursiveSlabFiles[i].getPathname()+".tmp", slabs.get(i).verticalSegmentsNumber);
             }
         }
     }
@@ -411,7 +411,7 @@ public class DistributionSweep {
                 slabs.get(slabs.size()-1).initialOffset,
                 offset,
                 slabs.get(slabs.size()-1).initX,
-                max_x + 1,
+                Double.MAX_VALUE,
                 slabs.get(slabs.size()-1).verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen));
 
 
@@ -470,20 +470,21 @@ public class DistributionSweep {
         }
         // recursive call
 
-        if (slabs.size() <= verticalSegmentsNumber) { // finish slabs with brute force
+
             for (int i = 0; i < slabs.size(); i++) {
-                if (horizontalNotComplete[i])
-                    fastReduct(slabs.get(i), slabRecursiveSegments.get(i));
-            }
-        } else {
-            for (int i = 0; i < slabs.size(); i++) {
-                if (horizontalNotComplete[i])
+
+                if (horizontalNotComplete[i]){
+                    if (slabs.get(i).verticalSegmentsNumber <= 1){
+                        fastReduct(slabs.get(i), slabRecursiveSegments.get(i));
+                    } else {
                     localRecursiveDistributionSweep(xSortedSegments, slabs.get(i).initialOffset, slabs.get(i).finalOffset,
                             slabRecursiveSegments.get(i), slabs.get(i).verticalSegmentsNumber);
+                    }
+                }
             }
         }
 
-    }
+
 
     /**
      * Finishes recursion calculating intersection by bruteforce.
@@ -495,12 +496,13 @@ public class DistributionSweep {
         assert (slab.verticalSegmentsNumber <= 1);
         Segment fSegment = slab.getFinalSegment();
         assert (fSegment.isVertical());
+        double yi = Math.min(fSegment.y1, fSegment.y2);
+        double yj = Math.max(fSegment.y1, fSegment.y2);
         for (Segment s : segments) {
             if (s.isHorizontal()) {
                 double xi = Math.min(s.x1, s.x2);
                 double xj = Math.max(s.x1, s.x2);
-                double yi = Math.min(fSegment.y1, fSegment.y2);
-                double yj = Math.max(fSegment.y1, fSegment.y2);
+
                 if (fSegment.x1 >= xi && fSegment.x1 <= xj && s.y1 >= yi && s.y1 <= yj) {
                     // hay interseccion
                     answerFile.savePoint(fSegment.x1, s.y1);
@@ -578,7 +580,9 @@ public class DistributionSweep {
         System.out.println("K: " + k + ", len: " + len + ", verticales: " + verticalSegmentsNumber + ";; beginIndex: " + beginIndex + " endIndex: " + endIndex);
         ArrayList<Slab> slabs = new ArrayList<>();
 
-
+        if (endIndex == -1){
+            return slabs;
+        }
         int verticalCounter = 0;
 
         int index_init = beginIndex;
@@ -613,7 +617,7 @@ public class DistributionSweep {
                 slabs.get(slabs.size()-1).initialOffset,
                 endIndex,
                 slabs.get(slabs.size()-1).initX,
-                max_x + 1,
+                Double.MAX_VALUE,
                 slabs.get(slabs.size()-1).verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen));
 
 
