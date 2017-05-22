@@ -26,7 +26,7 @@ public class MergeSort {
 
 
     public static void main(String[] args){
-        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495412913745.txt"));
+        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495493002999.txt"));
         String filename = mergeSort.sort();
         System.out.println("Segments sorted in "+filename);
     }
