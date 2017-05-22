@@ -5,8 +5,6 @@ import java.util.ArrayList;
 
 import segment.dispatcher.SegmentDispatcher;
 import segment.Segment;
-import segment.dispatcher.SegmentDispatcherPermanent;
-import segment.dispatcher.SegmentDispatcherTemporary;
 import algorithm.sort.comparators.*;
 import utils.UtilsIOSegments;
 
@@ -125,14 +123,16 @@ public class MergeSort {
         int filesMerged = 0; // id run to be read next
         int m = M/B; // pages that fit in RAM
         int numberLastFile = totalRuns; // id for file name
+        SegmentDispatcher segmentDispatcher = null;
         // break: when we've read all the runs and there's just one file left
         while(filesMerged < totalRuns && filesMerged+1 < numberLastFile) {
+            if (segmentDispatcher!=null) segmentDispatcher.setDeleteOnExit();
             ArrayList<RandomAccessFile> inputs = new ArrayList<>();
             // read next m-1 while there is more runs to read
             int i;
             for (i= 0; i < m-1 && i+filesMerged < numberLastFile; i++) {
                 try {
-                    inputs.add(i, new RandomAccessFile("Run_"+(i+1+filesMerged)+"_"+suid+".tmp", "r"));
+                    inputs.add(i, new RandomAccessFile("Run_"+(i+1+filesMerged)+"_"+suid+".txt", "r"));
                 } catch (FileNotFoundException e) {
                     System.err.println("Mergesort:: archivo temporal " + "Run_"+(i+1+filesMerged)+"_"+suid + " no se pudo leer");
                     System.err.println(e.toString());
@@ -140,7 +140,7 @@ public class MergeSort {
                 }
             }
             // Merge
-            mergeMRuns(inputs, "Run_"+(++numberLastFile)+"_"+suid);
+            segmentDispatcher = mergeMRuns(inputs, "Run_"+(++numberLastFile)+"_"+suid);
             filesMerged += i;
         }
         return "Run_"+numberLastFile+"_"+suid;
@@ -151,9 +151,9 @@ public class MergeSort {
      *  @param inputs    Files with segments sorted
      *  @param nameFile  Name for the temporary file
      */
-    private void mergeMRuns(ArrayList<RandomAccessFile> inputs, String nameFile) {
+    private SegmentDispatcher mergeMRuns(ArrayList<RandomAccessFile> inputs, String nameFile) {
         int totalInputs = inputs.size();
-        SegmentDispatcher fileOut = new SegmentDispatcherPermanent(nameFile);
+        SegmentDispatcher fileOut = new SegmentDispatcher(nameFile);
         fileOut.setMaxBytesRAM(B);
         int[] offset = new int[totalInputs];
         ArrayList<Segment>[] runs_page = new ArrayList[totalInputs];
@@ -195,6 +195,7 @@ public class MergeSort {
             fileOut.saveSegment(min);
         }
         fileOut.close();
+        return fileOut;
     }
 
 }
