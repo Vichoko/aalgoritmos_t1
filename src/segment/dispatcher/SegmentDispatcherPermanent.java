@@ -10,9 +10,8 @@ public class SegmentDispatcherPermanent extends SegmentDispatcher {
     public SegmentDispatcherPermanent(String nameFile){
         super(nameFile);
         try {
-            File file = new File(nameFile);
-            FileWriter fw = new FileWriter(file, true);
-            pw = new PrintWriter(fw);
+            File file = new File(nameFile+".txt");
+            pw = new PrintWriter(file);
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -19,14 +19,6 @@ abstract class FileWriter{
 
     FileWriter(String pathname) {
         this.pathname = pathname;
-        File f = new File(this.pathname);
-        try{
-            pw = new PrintWriter(f);
-        } catch (java.io.FileNotFoundException e){
-            System.err.print("FileWriter :: Couldn't open file to write.");
-            e.printStackTrace();
-            exit(-3);
-        }
         sb = new StringBuilder();
         elementsCount = 0;
     }
@@ -76,18 +68,6 @@ public abstract class SegmentDispatcher extends FileWriter{
 
     public void saveSegment(Segment segment){
         saveSegment(segment.x1, segment.y1, segment.x2, segment.y2);
-    }
-
-    public void saveSegments(ArrayList<Segment> segments){
-        for (Segment s : segments){
-            saveSegment(s);
-        }
-    }
-
-    public void saveSegments(ArrayDeque<Segment> segments){
-        for (Segment s : segments){
-            saveSegment(s);
-        }
     }
 
     public void saveSegment(double x1, double y1, double x2, double y2){

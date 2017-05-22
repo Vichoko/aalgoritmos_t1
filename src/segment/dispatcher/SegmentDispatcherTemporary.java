@@ -10,9 +10,8 @@ import static java.lang.System.exit;
  * Writes in a temporary file (it's deleted when program ends)
  */
 public class SegmentDispatcherTemporary extends SegmentDispatcher {
-
-
     private File m_File;
+
     public SegmentDispatcherTemporary(String nameFile) {
         super(nameFile);
         try {
@@ -23,8 +22,6 @@ public class SegmentDispatcherTemporary extends SegmentDispatcher {
             System.err.println(e.toString());
             exit(-1);
         }
-        //tempFile.deleteOnExit();
+        m_File.deleteOnExit();
     }
-
-    public File getFile(){return m_File;}
 }
