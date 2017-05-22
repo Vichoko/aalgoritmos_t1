@@ -20,10 +20,10 @@ public final class Constants {
         X,Y}
 
 	// Bytes of RAM
-    public static final int M = 1024*512;
+    public static final int M = 1024*32;
     // Bytes of page
-    public static final int B = 512;
+    public static final int B = 128;
 
     // Total segments
-    public static final int TOTAL_SEGMENTS = (int) Math.pow(2,16);
+    public static final int TOTAL_SEGMENTS = (int) Math.pow(2,14);
 }
