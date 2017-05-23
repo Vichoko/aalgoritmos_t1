@@ -5,7 +5,6 @@ import java.util.ArrayList;
 
 import segment.dispatcher.SegmentDispatcher;
 import segment.Segment;
-import segment.dispatcher.SegmentDispatcherTemporary;
 import algorithm.sort.comparators.*;
 import utils.UtilsIOSegments;
 
@@ -27,17 +26,16 @@ public class MergeSort {
 
 
     public static void main(String[] args){
-        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495063006490.txt"));
+        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495494457641.txt"));
         String filename = mergeSort.sort();
         System.out.println("Segments sorted in "+filename);
     }
 
-
-    /***
-     * Sorts the segments in the file by the specified axis
-     * Raises an error if no input file has been set
+    /**
      *
-     * @param axis      Sorts by this coordinate
+     * @param axis      Axis to sort
+     * @param inFile    File with the segments to be sorted
+     * @param sid       TODO: id?
      */
     public MergeSort(EAxis axis, File inFile, String sid){
         suid = sid;
@@ -57,7 +55,10 @@ public class MergeSort {
     }
 
 
-
+    /***
+     * Sorts the segments of the file specified in the constructor
+     * @return the filename with the segments sorted
+     */
     public String sort(){
         // first stage
         verticalSegmentsNo = 0;
@@ -75,10 +76,6 @@ public class MergeSort {
         return outputFilename;
     }
 
-    public String getOutputFilename(){
-        return outputFilename;
-    }
-
     /***
      * Reads M (size of RAM) bytes from the input file
      * Sorts them and saves them in a temporary file
@@ -87,27 +84,28 @@ public class MergeSort {
      */
     private int[] readSortRun(int runName, long offset){
         // read max RAM size
-        byte[] run = new byte[M];
+        byte[] buffer = new byte[M];
         try{
             accessFile.seek(offset);
-            accessFile.read(run); // Se carga en RAM
+            accessFile.read(buffer); // Se carga en RAM
         } catch (IOException e  ){
             System.err.println("Mergesort:: inFile no se pudo leer :/ ");
             System.err.println(e.toString());
             exit(-2);
         }
         // get Segment objects from byte data
-        UtilsIOSegments.ArrayBytesRead answer = UtilsIOSegments.getSegments(run);
+        UtilsIOSegments.ArrayBytesRead answer = UtilsIOSegments.getSegments(buffer);
         ArrayList<Segment> segments = answer.segments;
         int bytesRead = answer.bytesRead;
         segments.sort(segmentsComparator);
-        for (Segment s : segments){ // having segments in RAM, calculate number of vertical segments on the run.
+        // having segments in RAM, calculate number of vertical segments on the run.
+        for (Segment s : segments){
             if (s.isVertical()){
                 verticalSegmentsNo++;
             }
         }
         // Save temporary file
-        UtilsIOSegments.saveSegmentsTempFile(segments, "Run_"+suid+runName);
+        UtilsIOSegments.saveSegmentsTempFile(segments, "Run_"+runName+"_"+suid);
         return new int[]{bytesRead, segments.size()};
     }
 
@@ -121,39 +119,39 @@ public class MergeSort {
         int filesMerged = 0; // id run to be read next
         int m = M/B; // pages that fit in RAM
         int numberLastFile = totalRuns; // id for file name
+        SegmentDispatcher segmentDispatcher = null;
         // break: when we've read all the runs and there's just one file left
         while(filesMerged < totalRuns && filesMerged+1 < numberLastFile) {
+            if (segmentDispatcher!=null) segmentDispatcher.setDeleteOnExit();
             ArrayList<RandomAccessFile> inputs = new ArrayList<>();
             // read next m-1 while there is more runs to read
             int i;
             for (i= 0; i < m-1 && i+filesMerged < numberLastFile; i++) {
                 try {
-                    inputs.add(i, new RandomAccessFile("Run_"+suid + (i+1+filesMerged)+".tmp", "r"));
+                    inputs.add(i, new RandomAccessFile("Run_"+(i+1+filesMerged)+"_"+suid+".txt", "r"));
                 } catch (FileNotFoundException e) {
-                    System.err.println("Mergesort:: archivo temporal " + "Run_"+suid + (i+1+filesMerged) + " no se pudo leer");
+                    System.err.println("Mergesort:: archivo temporal " + "Run_"+(i+1+filesMerged)+"_"+suid + " no se pudo leer");
                     System.err.println(e.toString());
                     exit(-2);
                 }
             }
             // Merge
-            mergeMRuns(inputs, "Run_"+suid+(++numberLastFile));
+            segmentDispatcher = mergeMRuns(inputs, "Run_"+(++numberLastFile)+"_"+suid);
+            totalRuns++;
             filesMerged += i;
         }
-        return "Run_"+suid+numberLastFile;
+        return "Run_"+numberLastFile+"_"+suid;
     }
 
     /**
      * Creates a temporary file with the segments in the input files merged
-     *
-     * @param inputs    Files with segments sorted
-     * @param nameFile  Name for the temporary file
+     *  @param inputs    Files with segments sorted
+     *  @param nameFile  Name for the temporary file
      */
-    private void mergeMRuns(ArrayList<RandomAccessFile> inputs, String nameFile) {
+    private SegmentDispatcher mergeMRuns(ArrayList<RandomAccessFile> inputs, String nameFile) {
         int totalInputs = inputs.size();
-        int max_segments = B/32; // number of segments that fit in a page
-        ArrayList<Segment> out = new ArrayList<>(max_segments);
-        int out_index = 0;
-        SegmentDispatcher fileOut = new SegmentDispatcherTemporary(nameFile);
+        SegmentDispatcher fileOut = new SegmentDispatcher(nameFile);
+        fileOut.setMaxBytesRAM(B);
         int[] offset = new int[totalInputs];
         ArrayList<Segment>[] runs_page = new ArrayList[totalInputs];
         int[] indexArray = new int[totalInputs];
@@ -188,24 +186,13 @@ public class MergeSort {
             }
             // there're no more elements in none of the runs
             if (min == null) break;
-            // add the minimum to out, "delete" it from the run
+            // "delete" it from the run
             indexArray[min_index]++;
-            // if no more space in out
-            if (out_index == max_segments) {
-                // save segments
-                for (Segment segment: out)
-                    fileOut.saveSegment(segment);
-                out.clear();
-                out_index = 0;
-            }
-            out.add(out_index, min);
-            out_index++;
-        }
-        if (out.size() > 0){
-            for (Segment segment: out)
-                fileOut.saveSegment(segment);
+            // add the minimum to out
+            fileOut.saveSegment(min);
         }
         fileOut.close();
+        return fileOut;
     }
 
 }

@@ -4,7 +4,6 @@ import utils.random.IRandom;
 import utils.random.NormalRandom;
 import utils.random.UniformRandom;
 import segment.dispatcher.SegmentDispatcher;
-import segment.dispatcher.SegmentDispatcherPermanent;
 
 import static utils.Constants.*;
 
@@ -44,8 +43,8 @@ public class SegmentGenerator {
      * And uses segment.dispatcher to write them in a file
      */
     public String generateSegments(){
-        String filename = Long.toString(System.currentTimeMillis()) + ".txt";
-        SegmentDispatcher dispatcher = new SegmentDispatcherPermanent(filename);
+        String filename = Long.toString(System.currentTimeMillis());
+        SegmentDispatcher dispatcher = new SegmentDispatcher(filename);
         IRandom uniformXRand = new UniformRandom(X_MAX);
         IRandom uniformYRand = new UniformRandom(Y_MAX);
         IRandom normalRand = new NormalRandom(NORMAL_MEAN, NORMAL_DEVIATION);

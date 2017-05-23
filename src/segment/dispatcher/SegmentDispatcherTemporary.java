@@ -11,20 +11,8 @@ import static java.lang.System.exit;
  */
 public class SegmentDispatcherTemporary extends SegmentDispatcher {
 
-
-    private File m_File;
     public SegmentDispatcherTemporary(String nameFile) {
         super(nameFile);
-        try {
-            m_File = new File(nameFile+".tmp");
-            pw = new PrintWriter(m_File);
-        } catch (IOException e) {
-            System.err.println("Mergesort:: error al crear archivo temporal");
-            System.err.println(e.toString());
-            exit(-1);
-        }
-        //tempFile.deleteOnExit();
+        //file.deleteOnExit();
     }
-
-    public File getFile(){return m_File;}
 }
