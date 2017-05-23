@@ -10,6 +10,7 @@ import java.io.IOException;
 
 import static utils.Constants.INTERS_COUNTER;
 import static utils.Constants.IO_COUNTER;
+import static utils.Constants.TOTAL_SEGMENTS;
 
 /**
  * primera prueba
@@ -31,25 +32,25 @@ public class DSTest {
 
 
     public static void tester(int inputSize, Constants.EDistribution distr, double classBalance) throws IOException {
-        int m_segmentQuantity = inputSize;
+        TOTAL_SEGMENTS = inputSize;
         Constants.EDistribution m_segmentDistribution = distr;
         double m_segmentClassBalance = classBalance;
         IO_COUNTER=0;
         INTERS_COUNTER = 0;
 
         System.err.println("Starting test " + testno++);
-        System.err.println("Segment Quantity: " + m_segmentQuantity);
+        System.err.println("Segment Quantity: " + TOTAL_SEGMENTS);
         System.err.println("Distr: " + m_segmentDistribution);
         System.err.println("Segments Class Balance: " + m_segmentClassBalance);
 
         System.err.println("Generating segments...");
-        SegmentGenerator sg = new SegmentGenerator(m_segmentQuantity,
+        SegmentGenerator sg = new SegmentGenerator(TOTAL_SEGMENTS,
                 m_segmentDistribution, m_segmentClassBalance);
         String originalSegmentsFileName = sg.generateSegments();
         File originalSegmentsFile = new File(originalSegmentsFileName);
         System.err.println("    done");
         System.err.println("Lauching DistributionSweep...");
-        DistributionSweep ds = new DistributionSweep(originalSegmentsFile, m_segmentQuantity);
+        DistributionSweep ds = new DistributionSweep(originalSegmentsFile);
         String outFileName = "DSTEST_#" +   System.currentTimeMillis() + ".txt";
         ds.getIntersections(outFileName);
         System.err.println("    Done [DistributionSweep] test " + ++testno);

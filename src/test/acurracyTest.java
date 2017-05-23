@@ -19,13 +19,12 @@ public class acurracyTest {
         // TODO: Parsing?
         System.out.println("Starting acurracyTest");
 
-        int m_segmentQuantity = TOTAL_SEGMENTS;
         Constants.EDistribution m_segmentDistribution = Constants.EDistribution.NORMAL;
         double m_segmentClassBalance = 0.50;
 
         System.err.println("Starting first test.");
         System.err.println("Generating segments...");
-        SegmentGenerator sg = new SegmentGenerator(m_segmentQuantity,
+        SegmentGenerator sg = new SegmentGenerator(TOTAL_SEGMENTS,
                 m_segmentDistribution, m_segmentClassBalance);
         String originalSegmentsFileName = sg.generateSegments();
         File originalSegmentsFile = new File(originalSegmentsFileName);
@@ -35,7 +34,7 @@ public class acurracyTest {
         BruteforceDetection brutus = new BruteforceDetection(originalSegments, "acurracyTestOutfile");
 
         System.err.println("Lauching DistributionSweep...");
-        DistributionSweep ds = new DistributionSweep(originalSegmentsFile, m_segmentQuantity );
+        DistributionSweep ds = new DistributionSweep(originalSegmentsFile);
         String outFileName = "t_first#" +   System.currentTimeMillis() + ".txt";
         ds.getIntersections(outFileName);
         System.err.println("    Done [DistributionSweep]");

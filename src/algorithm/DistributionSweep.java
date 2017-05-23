@@ -27,21 +27,19 @@ public class DistributionSweep {
     private final int MAX_SIZE_ACTIVE_LIST = 2 * (B - 26) / 3;
     private final int MAX_SIZE_DISPATCHER = (B - 26) / 3;
     private int recursionNumber = 0;
-    private int segmentsQuantity;
 
-    public DistributionSweep(File inputFile, int segmentQuantity) {
+    public DistributionSweep(File inputFile) {
         this.inputFile = inputFile;
-        this.segmentsQuantity = segmentQuantity;
     }
 
     public void getIntersections(String filename) throws IOException {
         if (DEBUG) System.err.println("Creating answerFile " + filename);
         answerFile = new PointFileWriter(filename);
         if (DEBUG) System.err.println("Sorting file by X...");
-        MergeSort xSort = new MergeSort(EAxis.X, inputFile, "_x_", segmentsQuantity);
+        MergeSort xSort = new MergeSort(EAxis.X, inputFile, "_x_");
         String xSortFilename = xSort.sort();
         if (DEBUG) System.err.println("Sorting file by Y...");
-        String ySortFilename = new MergeSort(EAxis.Y, inputFile, "_y_", segmentsQuantity).sort();
+        String ySortFilename = new MergeSort(EAxis.Y, inputFile, "_y_").sort();
         int verticalSegmentsNo = xSort.getVerticalSegmentsNo();
         if (DEBUG) System.err.println("Starting DS Secondary-Memory Recursion...");
         Instant start = Instant.now();

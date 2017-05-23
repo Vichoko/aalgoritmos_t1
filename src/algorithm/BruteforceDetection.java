@@ -21,10 +21,14 @@ public class BruteforceDetection {
     public BruteforceDetection(ArrayList<Segment> array,
                                String outfilename)
     {
+        this(array, new PointFileWriter(outfilename));
+    }
+    public BruteforceDetection(ArrayList<Segment> array,
+                               PointFileWriter answerFile)
+    {
         if (DEBUG) {System.err.println("Starting Bruteforce Detection");}
         interCounter = 0;
         m_array = array;
-        answerFile = new PointFileWriter(outfilename);
         ArrayList<Segment> verticals = new ArrayList<>();
         ArrayList<Segment> horizotals = new ArrayList<>();
         if (DEBUG) {System.err.println("Separating segments...");}
