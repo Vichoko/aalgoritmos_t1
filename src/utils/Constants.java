@@ -22,5 +22,5 @@ public final class Constants {
     public static final int B = 256;
 
     // Total segments
-    public static final int TOTAL_SEGMENTS = (int) Math.pow(2,13);
+    public static final int TOTAL_SEGMENTS = (int) Math.pow(2,10);
 }

@@ -26,7 +26,7 @@ public class MergeSort {
 
 
     public static void main(String[] args){
-        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495493002999.txt"));
+        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495494457641.txt"));
         String filename = mergeSort.sort();
         System.out.println("Segments sorted in "+filename);
     }
@@ -73,10 +73,6 @@ public class MergeSort {
         }
         // second stage: merge
         outputFilename = mergeRuns(runCount);
-        return outputFilename;
-    }
-
-    public String getOutputFilename(){
         return outputFilename;
     }
 
@@ -141,6 +137,7 @@ public class MergeSort {
             }
             // Merge
             segmentDispatcher = mergeMRuns(inputs, "Run_"+(++numberLastFile)+"_"+suid);
+            totalRuns++;
             filesMerged += i;
         }
         return "Run_"+numberLastFile+"_"+suid;
