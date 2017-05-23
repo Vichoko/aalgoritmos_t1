@@ -13,6 +13,8 @@ import utils.*;
 import static utils.Constants.*;
 
 import java.io.*;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 
@@ -26,6 +28,7 @@ public class DistributionSweep {
     private final int MAX_SIZE_ACTIVE_LIST = 2 * (B - 26) / 3;
     private final int MAX_SIZE_DISPATCHER = (B - 26) / 3;
     private int recursionNumber = 0;
+    public int intersectionCounter = 0;
 
     public DistributionSweep(File inputFile) {
         this.inputFile = inputFile;
@@ -41,8 +44,12 @@ public class DistributionSweep {
         String ySortFilename = new MergeSort(EAxis.Y, inputFile, "_y_").sort();
         int verticalSegmentsNo = xSort.getVerticalSegmentsNo();
         if (DEBUG) System.err.println("Starting DS Secondary-Memory Recursion...");
+        Instant start = Instant.now();
         recursiveDistributionSweep(xSortFilename + ".tmp", 0, (int) inputFile.length(),0,Integer.MAX_VALUE,ySortFilename + ".tmp", verticalSegmentsNo);
+        Instant end = Instant.now();
         if (DEBUG) System.err.println(" Done Priamry-Memory recursion.");
+        System.out.println("Time elapsed for DS Algorithm is "+ Duration.between(start, end));
+
         answerFile.close();
         if (DEBUG) System.err.println("Closed answerFile " + answerFile.getPathname());
     }
@@ -61,11 +68,7 @@ public class DistributionSweep {
         // si es muy poco, duplicarlo o triplicarlo.
         // n.a. Viendo el codigo calculo que si se acaba la ram, hay que triplicar este valor.
         // n.a.2. me inclino que el tamaño podria ser el cuadrado de esto
-        if (DEBUG && DEBUG_PM_TRIGGER) {
-            DEBUG_PM_TRIGGER = false;
-            System.err.println(" Done Secondary-Memory recursion.");
-            System.err.println("Starting DS Primary-Memory Recursion...");
-        }
+
         return endOffset - beginOffset;
     }
 
@@ -124,6 +127,11 @@ public class DistributionSweep {
 
         // if fits in RAM
         if (getMemorySize(beginOffset, endOffset) < M) {
+            if (DEBUG && DEBUG_PM_TRIGGER) {
+                DEBUG_PM_TRIGGER = false;
+                System.err.println(" Done Secondary-Memory recursion.");
+                System.err.println("Starting DS Primary-Memory Recursion...");
+            }
             // prepares the data for primary memory usage
             //ArrayList<Segment> xSortedSegments = extractXSortedArray(xSortedFilename, beginOffset, endOffset, beginIndex, endIndex);
             ArrayList<Segment> ySortedSegments = extractYSortedArray(ySortedFilename);
@@ -209,7 +217,7 @@ public class DistributionSweep {
      * @return arrayList with the content of the file loaded in RAM.
      * @throws FileNotFoundException
      */
-    private ArrayList<Segment> SegmentFileToArray(String filename, int beginOffset, int endOffset, int beginIndex, int endIndex) throws FileNotFoundException {
+    public static ArrayList<Segment> SegmentFileToArray(String filename, int beginOffset, int endOffset, int beginIndex, int endIndex) throws FileNotFoundException {
         ArrayList<Segment> array = new ArrayList<>();
 
         int offset = beginOffset;
@@ -288,6 +296,7 @@ public class DistributionSweep {
                 double y = Math.max(s.y1, s.y2);
                 if (y >= sweepLineHeight) { // save intersection & mantain in active segments
                     answerFile.savePoint(s.x1, sweepLineHeight);
+                    intersectionCounter++;
                     addToActiveVerticals(activeVerticalsAux[slab],
                             activeVerticalFilesAux[slab], s); // add to updated newActiveVertical list
                 }
@@ -303,6 +312,7 @@ public class DistributionSweep {
                     double y = Math.max(s.y1, s.y2);
                     if (y >= sweepLineHeight) {
                         answerFile.savePoint(s.x1, sweepLineHeight);
+                        intersectionCounter++;
                         addToActiveVerticals(activeVerticalsAux[slab],
                                 activeVerticalFilesAux[slab], s); // add to updated newActiveVertical list
                     }
@@ -464,6 +474,9 @@ public class DistributionSweep {
             }
         }
 
+        if (slabs.size() == 0){
+            return new ArrayList<Slab>();
+        }
 
 
         slabs.set(slabs.size()-1, new Slab(
@@ -567,6 +580,7 @@ public class DistributionSweep {
                 if (fSegment.x1 >= xi && fSegment.x1 <= xj && s.y1 >= yi && s.y1 <= yj) {
                     // hay interseccion
                     answerFile.savePoint(fSegment.x1, s.y1);
+                    intersectionCounter++;
                 }
             }
         }
@@ -588,6 +602,7 @@ public class DistributionSweep {
                     activeVerticals[slab].remove(s);
                 } else {
                     answerFile.savePoint(s.x1, sweepLineHeight); // TODO: Considerar guardarlo directamente en buffer en RAM
+                    intersectionCounter++;
                 }
             }
         }
