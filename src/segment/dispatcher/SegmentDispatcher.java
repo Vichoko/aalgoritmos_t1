@@ -31,19 +31,20 @@ public class SegmentDispatcher extends FileWriter{
         this.maxElements = maxBytesRAM/37;
     }
 
-    public void saveSegment(Segment segment){
-        saveSegment(segment.x1, segment.y1, segment.x2, segment.y2);
+    public boolean saveSegment(Segment segment){
+        return saveSegment(segment.x1, segment.y1, segment.x2, segment.y2);
     }
 
-    public void saveSegment(double x1, double y1, double x2, double y2){
+    public boolean saveSegment(double x1, double y1, double x2, double y2){
         // format: "x1,x2,y1,y2,\n"
         String sx1 = Double.toString(truncateTo3dec(x1));
         String sy1= Double.toString(truncateTo3dec(y1));
         String sx2 = Double.toString(truncateTo3dec(x2));
         String sy2= Double.toString(truncateTo3dec(y2));
-        checkCapacity();
+        boolean b = checkCapacity();
         sb.append(sx1).append(",").append(sy1).append(",").append(sx2).append(",").append(sy2).append(",\n");
         elementsCount++;
+        return b;
     }
 }
 
