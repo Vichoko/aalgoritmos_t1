@@ -25,6 +25,7 @@ public class DistributionSweep {
     private PointFileWriter answerFile;
     private final int MAX_SIZE_ACTIVE_LIST = 2 * (B - 26) / 3;
     private final int MAX_SIZE_DISPATCHER = (B - 26) / 3;
+    private int recursionNumber = 0;
 
     public DistributionSweep(File inputFile) {
         this.inputFile = inputFile;
@@ -119,6 +120,7 @@ public class DistributionSweep {
      */
     private void recursiveDistributionSweep(String xSortedFilename, int beginOffset, int endOffset, int beginIndex, int endIndex,
                                             String ySortedFilename, int verticalSegmentsNumber) throws IOException {
+        recursionNumber++;
 
         // if fits in RAM
         if (getMemorySize(beginOffset, endOffset) < M) {
@@ -134,6 +136,9 @@ public class DistributionSweep {
             // => 8*10^7, it fit in an integer
 
             ArrayList<Slab> slabs = generateSlabs(xSortedFilename, verticalSegmentsNumber, beginOffset, endOffset, beginIndex, endIndex);
+            if (slabs.size() == 0){// case no vertical segment found
+                return;
+            }
             // def slab dependant objects
             ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.size()];
             RandomAccessFile[] activeVerticalFile = new RandomAccessFile[slabs.size()];
@@ -144,13 +149,13 @@ public class DistributionSweep {
             boolean[] horizontalNotComplete = new boolean[slabs.size()];
             for (int i = 0; i < slabs.size(); i++) { // init slab dependant objects
                 activeVerticals[i] = new ArrayDeque<>();
-                activeVerticalFile[i] = new RandomAccessFile(new File("activeVertical_" + i + ".txt"), "rw");
+                activeVerticalFile[i] = new RandomAccessFile(new File(recursionNumber + "__activeVertical_" + i + ".txt"), "rw");
 
                 activeVerticalsAux[i] = new ArrayDeque<>();
-                activeVerticalFilesAux[i] = new RandomAccessFile(new File("activeVertical_" + (slabs.size() + i) + ".txt"), "rw");
+                activeVerticalFilesAux[i] = new RandomAccessFile(new File(recursionNumber + "__activeVertical_" + (slabs.size() + i) + ".txt"), "rw");
 
 
-                yRecursiveSlabFiles[i] = new SegmentDispatcherTemporary("yRecursiveSlabFiles" + i);
+                yRecursiveSlabFiles[i] = new SegmentDispatcherTemporary(recursionNumber + "__yRecursiveSlabFiles" + i);
 
                 yRecursiveSlabFiles[i].setMaxBytesRAM(MAX_SIZE_DISPATCHER);
                 horizontalNotComplete[i] = false;
@@ -492,7 +497,11 @@ public class DistributionSweep {
     private void localRecursiveDistributionSweep(ArrayList<Segment> xSortedSegments, int beginIndex, int endIndex,
                                                  ArrayList<Segment> ySortedSegments,
                                                  int verticalSegmentsNumber) {
+        recursionNumber++;
         ArrayList<Slab> slabs = generateSlabsLocal(xSortedSegments, verticalSegmentsNumber, beginIndex, endIndex);
+        if (slabs.size() == 0){// case no vertical segment found
+            return;
+        }
 
         ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.size()];
         ArrayList<ArrayList<Segment>> slabRecursiveSegments = new ArrayList<>(slabs.size());
@@ -624,7 +633,6 @@ public class DistributionSweep {
 
 
     private ArrayList<Slab> generateSlabsLocal(ArrayList<Segment> xSortedSegments, int verticalSegmentsNumber, int beginIndex, int endIndex) {
-        if (DEBUG) System.err.println("Generating slabs...");
         int k = M / (3*B); // if k > len k = len. rest: debe haber al menos 1 vertical por slab
         if (k > verticalSegmentsNumber) {
             k = verticalSegmentsNumber;
@@ -632,12 +640,6 @@ public class DistributionSweep {
         int len = (int) Math.ceil(verticalSegmentsNumber / k);
         ArrayList<Slab> slabs = new ArrayList<>();
 
-        if (endIndex <= 0){
-            //return slabs;
-            int asd = 1;
-            slabs = new ArrayList<>();
-
-        }
         int verticalCounter = 0;
 
         int index_init = beginIndex;
@@ -667,6 +669,9 @@ public class DistributionSweep {
             }
         }
 
+        if (slabs.size() <= 0){
+            return new ArrayList<Slab>();
+        }
         slabs.set(slabs.size()-1, new Slab(0,0,
                 slabs.get(slabs.size()-1).initialIndex,
                 endIndex,
@@ -675,7 +680,6 @@ public class DistributionSweep {
                 slabs.get(slabs.size()-1).initX,
                 Double.MAX_VALUE));
 
-        if (DEBUG) System.err.println("    Done.");
         return slabs;
     }
 
