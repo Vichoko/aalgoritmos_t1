@@ -21,7 +21,7 @@ public class DSTest {
     }
 
 
-    public static void tester(int inputSize, Constants.EDistribution distr, double classBalance){
+    public static void tester(int inputSize, Constants.EDistribution distr, double classBalance) throws IOException {
         int m_segmentQuantity = inputSize;
         Constants.EDistribution m_segmentDistribution = distr;
         double m_segmentClassBalance = classBalance;
