@@ -13,6 +13,6 @@ public class SegmentDispatcherTemporary extends SegmentDispatcher {
 
     public SegmentDispatcherTemporary(String nameFile) {
         super(nameFile);
-        //file.deleteOnExit();
+        file.deleteOnExit();
     }
 }

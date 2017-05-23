@@ -27,18 +27,23 @@ public abstract class FileWriter{
 
     abstract public void setMaxBytesRAM(int maxBytesRAM);
 
-    public void close(){
-        if (sb.length()!=0)
+    public boolean close(){
+        if (sb.length()!=0) {
             writePage();
+            return true;
+        }
         pw.close();
+        return false;
     }
 
-    void checkCapacity(){
+    boolean checkCapacity(){
         if (elementsCount+1 >= maxElements){
             writePage();
             elementsCount = 0;
             sb.setLength(0);
+            return true;
         }
+        return false;
     }
 
     private void writePage(){

@@ -44,7 +44,7 @@ public class DistributionSweep {
  ************************************************************************************************************************************************** *
  */
     /**
-     * Should return memory usage of the software, based on the attributes recieved.
+     * Returns memory usage of the software, based on the attributes received.
      *
      * @param beginOffset In bytes, offset in segment file where to start reading.
      * @param endOffset   In bytes, offset in segment file where to stop reading.
@@ -177,7 +177,7 @@ public class DistributionSweep {
     }
 
     /**
-     * Read a File of Segments to an ArrayList. Supossing it fits in RAM!
+     * Read a File of Segments to an ArrayList. Supposing it fits in RAM!
      * Used at RAM recursion step.
      *
      * @param filename    name of the file
