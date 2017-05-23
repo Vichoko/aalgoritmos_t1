@@ -1,17 +1,20 @@
 package algorithm;
 
+import algorithm.sort.comparators.SegmentComparatorX;
 import segment.Segment;
 import segment.dispatcher.PointFileWriter;
 import segment.dispatcher.SegmentDispatcher;
 import segment.dispatcher.SegmentDispatcherTemporary;
 import algorithm.sort.MergeSort;
+import algorithm.sort.comparators.*;
 import utils.*;
 
 
 import static utils.Constants.*;
 
 import java.io.*;
-import java.lang.reflect.Array;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 
@@ -24,20 +27,31 @@ public class DistributionSweep {
     private PointFileWriter answerFile;
     private final int MAX_SIZE_ACTIVE_LIST = 2 * (B - 26) / 3;
     private final int MAX_SIZE_DISPATCHER = (B - 26) / 3;
+    private int recursionNumber = 0;
+    public int intersectionCounter = 0;
 
     public DistributionSweep(File inputFile) {
         this.inputFile = inputFile;
     }
 
     public void getIntersections(String filename) throws IOException {
+        if (DEBUG) System.err.println("Creating answerFile " + filename);
         answerFile = new PointFileWriter(filename);
+        if (DEBUG) System.err.println("Sorting file by X...");
         MergeSort xSort = new MergeSort(EAxis.X, inputFile, "_x_");
         String xSortFilename = xSort.sort();
+        if (DEBUG) System.err.println("Sorting file by Y...");
         String ySortFilename = new MergeSort(EAxis.Y, inputFile, "_y_").sort();
         int verticalSegmentsNo = xSort.getVerticalSegmentsNo();
+        if (DEBUG) System.err.println("Starting DS Secondary-Memory Recursion...");
+        Instant start = Instant.now();
+        recursiveDistributionSweep(xSortFilename + ".tmp", 0, (int) inputFile.length(),0,Integer.MAX_VALUE,ySortFilename + ".tmp", verticalSegmentsNo);
+        Instant end = Instant.now();
+        if (DEBUG) System.err.println(" Done Priamry-Memory recursion.");
+        System.out.println("Time elapsed for DS Algorithm is "+ Duration.between(start, end));
 
-        recursiveDistributionSweep(xSortFilename + ".tmp", 0, (int) inputFile.length(), ySortFilename + ".tmp", verticalSegmentsNo);
         answerFile.close();
+        if (DEBUG) System.err.println("Closed answerFile " + answerFile.getPathname());
     }
 /************************************************************************************************************************************************** *
  *          SHARED METHODS
@@ -54,6 +68,7 @@ public class DistributionSweep {
         // si es muy poco, duplicarlo o triplicarlo.
         // n.a. Viendo el codigo calculo que si se acaba la ram, hay que triplicar este valor.
         // n.a.2. me inclino que el tamaño podria ser el cuadrado de esto
+
         return endOffset - beginOffset;
     }
 
@@ -106,20 +121,32 @@ public class DistributionSweep {
      * @param verticalSegmentsNumber Cantidad de segmentos verticales dentro del rango de offset
      * @throws IOException
      */
-    private void recursiveDistributionSweep(String xSortedFilename, int beginOffset, int endOffset,
+    private void recursiveDistributionSweep(String xSortedFilename, int beginOffset, int endOffset, int beginIndex, int endIndex,
                                             String ySortedFilename, int verticalSegmentsNumber) throws IOException {
+        recursionNumber++;
 
         // if fits in RAM
         if (getMemorySize(beginOffset, endOffset) < M) {
+            if (DEBUG && DEBUG_PM_TRIGGER) {
+                DEBUG_PM_TRIGGER = false;
+                System.err.println(" Done Secondary-Memory recursion.");
+                System.err.println("Starting DS Primary-Memory Recursion...");
+            }
             // prepares the data for primary memory usage
-            ArrayList<Segment> xSortedSegments = extractXSortedArray(xSortedFilename, beginOffset, endOffset);
+            //ArrayList<Segment> xSortedSegments = extractXSortedArray(xSortedFilename, beginOffset, endOffset, beginIndex, endIndex);
             ArrayList<Segment> ySortedSegments = extractYSortedArray(ySortedFilename);
+            ArrayList<Segment> xSortedSegments = ySortedSegments;
+            xSortedSegments.sort(new SegmentComparatorX()); // cheap, few segments in most cases
             localRecursiveDistributionSweep(xSortedSegments, 0, xSortedSegments.size() - 1, ySortedSegments, verticalSegmentsNumber);
 
         } else {
             // Obs. max bytes offset 2^21 * 10*4 (each point is a double, 8 bytes + comas and points = 10 bytes)
             // => 8*10^7, it fit in an integer
-            ArrayList<Slab> slabs = generateSlabs(xSortedFilename, verticalSegmentsNumber, beginOffset, endOffset);
+
+            ArrayList<Slab> slabs = generateSlabs(xSortedFilename, verticalSegmentsNumber, beginOffset, endOffset, beginIndex, endIndex);
+            if (slabs.size() == 0){// case no vertical segment found
+                return;
+            }
             // def slab dependant objects
             ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.size()];
             RandomAccessFile[] activeVerticalFile = new RandomAccessFile[slabs.size()];
@@ -130,13 +157,13 @@ public class DistributionSweep {
             boolean[] horizontalNotComplete = new boolean[slabs.size()];
             for (int i = 0; i < slabs.size(); i++) { // init slab dependant objects
                 activeVerticals[i] = new ArrayDeque<>();
-                activeVerticalFile[i] = new RandomAccessFile(new File("activeVertical_" + i + ".txt"), "rw");
+                activeVerticalFile[i] = new RandomAccessFile(new File(recursionNumber + "__activeVertical_" + i + ".txt"), "rw");
 
                 activeVerticalsAux[i] = new ArrayDeque<>();
-                activeVerticalFilesAux[i] = new RandomAccessFile(new File("activeVertical_" + (slabs.size() + i) + ".txt"), "rw");
+                activeVerticalFilesAux[i] = new RandomAccessFile(new File(recursionNumber + "__activeVertical_" + (slabs.size() + i) + ".txt"), "rw");
 
 
-                yRecursiveSlabFiles[i] = new SegmentDispatcherTemporary("yRecursiveSlabFiles" + i);
+                yRecursiveSlabFiles[i] = new SegmentDispatcherTemporary(recursionNumber + "__yRecursiveSlabFiles" + i);
 
                 yRecursiveSlabFiles[i].setMaxBytesRAM(MAX_SIZE_DISPATCHER);
                 horizontalNotComplete[i] = false;
@@ -144,6 +171,7 @@ public class DistributionSweep {
             RandomAccessFile ySegmentsSorted = new RandomAccessFile(ySortedFilename, "r");
             int offsetY = 0;
             // sweep line
+            if (DEBUG) System.err.println("Starting Sweep...");
             while (true) {
                 UtilsIOSegments.ArrayBytesRead page = UtilsIOSegments.readPage(ySegmentsSorted, offsetY);
                 ArrayList<Segment> segments = page.segments;
@@ -165,12 +193,15 @@ public class DistributionSweep {
                     }
                 }
             }
+            if (DEBUG) System.err.println("    Done.");
+            if (DEBUG) System.err.println("Recursive call ->");
             // recursive call
             for (int i = 0; i < slabs.size(); i++)
                 yRecursiveSlabFiles[i].close();
             for (int i = 0; i < slabs.size(); i++) {
                 if (horizontalNotComplete[i])
                     recursiveDistributionSweep(xSortedFilename, slabs.get(i).initialOffset, slabs.get(i).finalOffset,
+                            slabs.get(i).initialIndex, slabs.get(i).finalIndex,
                             yRecursiveSlabFiles[i].getPathname()+".tmp", slabs.get(i).verticalSegmentsNumber);
             }
         }
@@ -186,17 +217,31 @@ public class DistributionSweep {
      * @return arrayList with the content of the file loaded in RAM.
      * @throws FileNotFoundException
      */
-    private ArrayList<Segment> SegmentFileToArray(String filename, int beginOffset, int endOffset) throws FileNotFoundException {
+    public static ArrayList<Segment> SegmentFileToArray(String filename, int beginOffset, int endOffset, int beginIndex, int endIndex) throws FileNotFoundException {
         ArrayList<Segment> array = new ArrayList<>();
 
         int offset = beginOffset;
         RandomAccessFile raf = new RandomAccessFile(filename, "r");
         while (true) {
-            UtilsIOSegments.ArrayBytesRead page = (endOffset < 0) ? UtilsIOSegments.readPage(raf, offset) : UtilsIOSegments.readPage(raf, offset, endOffset);
+            UtilsIOSegments.ArrayBytesRead page = (endOffset < 0 || endOffset == beginOffset) ? UtilsIOSegments.readPage(raf, offset) : UtilsIOSegments.readPage(raf, offset, endOffset);
             ArrayList<Segment> segments = page.segments;
             offset += page.bytesRead;
             if (segments.size() == 0) break;
-            array.addAll(segments);
+            if (offset == page.bytesRead){
+                // first page read
+                for (int i = beginIndex; i < segments.size(); i++){
+                    array.add(segments.get(i));
+                }
+            }
+            else if (offset >= endOffset){
+                //last page read
+                for (int i = 0; i < endIndex && i < segments.size(); i++){
+                    array.add(segments.get(i));
+                }
+            }
+            else{
+                array.addAll(segments);
+            }
         }
         return array;
     }
@@ -211,8 +256,8 @@ public class DistributionSweep {
      * @return
      * @throws FileNotFoundException
      */
-    private ArrayList<Segment> extractXSortedArray(String xSortedFilename, int beginOffset, int endOffset) throws FileNotFoundException {
-        return SegmentFileToArray(xSortedFilename, beginOffset, endOffset);
+    private ArrayList<Segment> extractXSortedArray(String xSortedFilename, int beginOffset, int endOffset, int beginIndex, int endIndex) throws FileNotFoundException {
+        return SegmentFileToArray(xSortedFilename, beginOffset, endOffset, beginIndex, endIndex);
     }
 
     /**
@@ -224,7 +269,7 @@ public class DistributionSweep {
      * @throws FileNotFoundException
      */
     private ArrayList<Segment> extractYSortedArray(String ySortedFilename) throws FileNotFoundException {
-        return SegmentFileToArray(ySortedFilename, 0, -1);
+        return SegmentFileToArray(ySortedFilename, 0, -1, 0, Integer.MAX_VALUE);
     }
 
 
@@ -251,6 +296,7 @@ public class DistributionSweep {
                 double y = Math.max(s.y1, s.y2);
                 if (y >= sweepLineHeight) { // save intersection & mantain in active segments
                     answerFile.savePoint(s.x1, sweepLineHeight);
+                    intersectionCounter++;
                     addToActiveVerticals(activeVerticalsAux[slab],
                             activeVerticalFilesAux[slab], s); // add to updated newActiveVertical list
                 }
@@ -266,6 +312,7 @@ public class DistributionSweep {
                     double y = Math.max(s.y1, s.y2);
                     if (y >= sweepLineHeight) {
                         answerFile.savePoint(s.x1, sweepLineHeight);
+                        intersectionCounter++;
                         addToActiveVerticals(activeVerticalsAux[slab],
                                 activeVerticalFilesAux[slab], s); // add to updated newActiveVertical list
                     }
@@ -359,7 +406,8 @@ public class DistributionSweep {
      * @return Array with slabs, each one with initial offset in 0 and final offset in 1
      * @throws IOException Error reading the file
      */
-    private ArrayList<Slab> generateSlabs(String xSortedFilename, int verticalSegmentsNo, int beginOffset, int endOffset) throws IOException {
+    private ArrayList<Slab> generateSlabs(String xSortedFilename, int verticalSegmentsNo, int beginOffset, int endOffset, int beginIndex, int endIndex) throws IOException {
+        if (DEBUG) System.err.println("Generating slabs...");
         int k = M / B - 2; // have to be <= m
         if (k > verticalSegmentsNo) {
             k = verticalSegmentsNo;
@@ -377,20 +425,41 @@ public class DistributionSweep {
         double startX = 0;
         Segment lastVerticalSegmentSeen = null;
         double max_x = 0;
+        int ind = Integer.MAX_VALUE;
+
 
         while (true) {
-            UtilsIOSegments.ArrayBytesRead page = UtilsIOSegments.readPage(xSegmentsSorted, offset, endOffset);
+            UtilsIOSegments.ArrayBytesRead page = (beginOffset == endOffset) ? UtilsIOSegments.readPage(xSegmentsSorted, offset) : UtilsIOSegments.readPage(xSegmentsSorted, offset, endOffset);
             ArrayList<Segment> segments = page.segments;
             offset += page.bytesRead;
+            int index_offset = 0;
             if (segments.size() == 0) break;
-            for (Segment s : segments) {
+            int i, j;
+
+            if (offset <= beginOffset){
+                //first page read
+                i = beginIndex;
+                index_offset = i;
+                j = segments.size();
+            }
+            else if (offset >= endOffset){ // no se si se cumpla
+                //final page read
+                i = 0;
+                j = Math.min(endIndex, segments.size());            }
+            else{
+                i = 0;
+                j = segments.size();
+            }
+            for (ind = i; ind < j; ind++) {
+                Segment s = segments.get(ind);
+
                 if (s.isVertical()) {
                     assert (s.x1 == s.x2); // if its vertical should pass
                     lastVerticalSegmentSeen = s;
                     verticalCounter++;
 
                     if (verticalCounter >= len) { //last vertical segment in slab
-                        slabs.add(new Slab(offset_init, offset, startX, s.x1, verticalCounter, s));
+                        slabs.add(new Slab(offset_init, offset, index_offset, ind, verticalCounter, s, startX, s.x1));
                         //restart
                         verticalCounter = 0;
                         offset_init = offset;
@@ -405,17 +474,18 @@ public class DistributionSweep {
             }
         }
 
+        if (slabs.size() == 0){
+            return new ArrayList<Slab>();
+        }
 
 
         slabs.set(slabs.size()-1, new Slab(
-                slabs.get(slabs.size()-1).initialOffset,
-                offset,
-                slabs.get(slabs.size()-1).initX,
-                Double.MAX_VALUE,
-                slabs.get(slabs.size()-1).verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen));
+                slabs.get(slabs.size()-1).initialOffset, offset,
+                slabs.get(slabs.size()-1).initialIndex, ind,
+                slabs.get(slabs.size()-1).verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen, slabs.get(slabs.size()-1).initX, Double.MAX_VALUE));
 
 
-
+        if (DEBUG) System.err.println("    Done.");
         return slabs;
     }
 
@@ -440,7 +510,11 @@ public class DistributionSweep {
     private void localRecursiveDistributionSweep(ArrayList<Segment> xSortedSegments, int beginIndex, int endIndex,
                                                  ArrayList<Segment> ySortedSegments,
                                                  int verticalSegmentsNumber) {
+        recursionNumber++;
         ArrayList<Slab> slabs = generateSlabsLocal(xSortedSegments, verticalSegmentsNumber, beginIndex, endIndex);
+        if (slabs.size() == 0){// case no vertical segment found
+            return;
+        }
 
         ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.size()];
         ArrayList<ArrayList<Segment>> slabRecursiveSegments = new ArrayList<>(slabs.size());
@@ -477,7 +551,7 @@ public class DistributionSweep {
                     if (slabs.get(i).verticalSegmentsNumber <= 1){
                         fastReduct(slabs.get(i), slabRecursiveSegments.get(i));
                     } else {
-                    localRecursiveDistributionSweep(xSortedSegments, slabs.get(i).initialOffset, slabs.get(i).finalOffset,
+                    localRecursiveDistributionSweep(xSortedSegments, slabs.get(i).initialIndex, slabs.get(i).finalIndex,
                             slabRecursiveSegments.get(i), slabs.get(i).verticalSegmentsNumber);
                     }
                 }
@@ -506,6 +580,7 @@ public class DistributionSweep {
                 if (fSegment.x1 >= xi && fSegment.x1 <= xj && s.y1 >= yi && s.y1 <= yj) {
                     // hay interseccion
                     answerFile.savePoint(fSegment.x1, s.y1);
+                    intersectionCounter++;
                 }
             }
         }
@@ -527,6 +602,7 @@ public class DistributionSweep {
                     activeVerticals[slab].remove(s);
                 } else {
                     answerFile.savePoint(s.x1, sweepLineHeight); // TODO: Considerar guardarlo directamente en buffer en RAM
+                    intersectionCounter++;
                 }
             }
         }
@@ -577,12 +653,8 @@ public class DistributionSweep {
             k = verticalSegmentsNumber;
         }
         int len = (int) Math.ceil(verticalSegmentsNumber / k);
-        System.out.println("K: " + k + ", len: " + len + ", verticales: " + verticalSegmentsNumber + ";; beginIndex: " + beginIndex + " endIndex: " + endIndex);
         ArrayList<Slab> slabs = new ArrayList<>();
 
-        if (endIndex == -1){
-            return slabs;
-        }
         int verticalCounter = 0;
 
         int index_init = beginIndex;
@@ -590,16 +662,15 @@ public class DistributionSweep {
         double startX = 0;
         double max_x = 0;
         Segment lastVerticalSegmentSeen = null;
+
         for (int index_current = beginIndex; index_current <= endIndex; index_current++) { // itera sobre el arreglo x, creando los slabs
             // considerar eliminar el sistema de indices
             Segment segment = xSortedSegments.get(index_current);
             if (segment.isVertical()) {
-                System.out.print("V ");
                 lastVerticalSegmentSeen = segment;
                 verticalCounter++;
                 if (verticalCounter >= len) {
-                    System.out.println("su slab");
-                    slabs.add(new Slab(index_init, index_current, startX, segment.x1, verticalCounter, segment));
+                    slabs.add(new Slab(0,0,index_init, index_current, verticalCounter, segment, startX, segment.x1));
                     // restart
                     verticalCounter = 0;
                     index_init = index_current;
@@ -613,13 +684,16 @@ public class DistributionSweep {
             }
         }
 
-        slabs.set(slabs.size()-1, new Slab(
-                slabs.get(slabs.size()-1).initialOffset,
+        if (slabs.size() <= 0){
+            return new ArrayList<Slab>();
+        }
+        slabs.set(slabs.size()-1, new Slab(0,0,
+                slabs.get(slabs.size()-1).initialIndex,
                 endIndex,
+                slabs.get(slabs.size()-1).verticalSegmentsNumber + verticalCounter,
+                lastVerticalSegmentSeen,
                 slabs.get(slabs.size()-1).initX,
-                Double.MAX_VALUE,
-                slabs.get(slabs.size()-1).verticalSegmentsNumber + verticalCounter, lastVerticalSegmentSeen));
-
+                Double.MAX_VALUE));
 
         return slabs;
     }

@@ -4,23 +4,32 @@ import algorithm.DistributionSweep;
 import segment.SegmentGenerator;
 import utils.Constants;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 
 import static utils.Constants.TOTAL_SEGMENTS;
 
 /**
  * primera prueba
  */
-public class first {
-    public static int testno = 0;
-
+public class DSTest {
+    public static int testno = 1;
     public static void main(String[] args) throws IOException {
         // Variables
         // TODO: Parsing?
-        int m_segmentQuantity = TOTAL_SEGMENTS;
-        Constants.EDistribution m_segmentDistribution = Constants.EDistribution.NORMAL;
-        double m_segmentClassBalance = 0.50;
 
+    }
+
+
+    public static void tester(int inputSize, Constants.EDistribution distr, double classBalance){
+        int m_segmentQuantity = inputSize;
+        Constants.EDistribution m_segmentDistribution = distr;
+        double m_segmentClassBalance = classBalance;
+
+        System.err.println("Starting test " + ++testno);
+        System.err.println("Segment Quantity: " + m_segmentQuantity);
+        System.err.println("Distr: " + m_segmentDistribution);
+        System.err.println("Balance: " + m_segmentClassBalance);
 
         System.err.println("Generating segments...");
         SegmentGenerator sg = new SegmentGenerator(m_segmentQuantity,
@@ -35,5 +44,5 @@ public class first {
         System.err.println("    Done [DistributionSweep]");
         // check outFileName for intersections
     }
-
 }
+
