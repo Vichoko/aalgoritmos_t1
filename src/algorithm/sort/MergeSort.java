@@ -18,14 +18,14 @@ public class MergeSort {
     private SegmentComparator segmentsComparator;
     private int verticalSegmentsNo;
     private String id;
-    private long memoryAccesCount;
+    private long memoryAccessCount;
 
 
     public static void main(String[] args){
-        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495494457641.txt"));
+        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495568283620.txt"));
         String filename = mergeSort.sort();
         System.out.println("Segments sorted in "+filename);
-        System.out.println("Number access secondary memory:"+mergeSort.getMemoryAccesCount());
+        System.out.println("Number access secondary memory:"+mergeSort.getMemoryAccessCount());
     }
 
     /**
@@ -36,7 +36,7 @@ public class MergeSort {
      */
     public MergeSort(EAxis axis, File inFile, String id){
         this.id = id;
-        memoryAccesCount = 0;
+        memoryAccessCount = 0;
         verticalSegmentsNo = -1;
         segmentsComparator = (axis==EAxis.X) ? new SegmentComparatorX() : new SegmentComparatorY();
         try{
@@ -56,8 +56,8 @@ public class MergeSort {
         return verticalSegmentsNo;
     }
 
-    public long getMemoryAccesCount() {
-        return memoryAccesCount;
+    public long getMemoryAccessCount() {
+        return memoryAccessCount;
     }
 
     /***
@@ -77,7 +77,8 @@ public class MergeSort {
             segmentsRead += read[1];
         }
         // second stage: merge
-        return mergeRuns(runCount);
+        String filenameOut = mergeRuns(runCount);
+        return filenameOut;
     }
 
     /***
@@ -99,7 +100,7 @@ public class MergeSort {
         }
         // get Segment objects from byte data
         UtilsIOSegments.ArrayBytesRead answer = UtilsIOSegments.getSegments(buffer);
-        memoryAccesCount++;
+        memoryAccessCount++;
         ArrayList<Segment> segments = answer.segments;
         int bytesRead = answer.bytesRead;
         segments.sort(segmentsComparator);
@@ -111,7 +112,7 @@ public class MergeSort {
         }
         // Save temporary file
         UtilsIOSegments.saveSegmentsTempFile(segments, "Run_"+runName+"_"+id);
-        memoryAccesCount++;
+        memoryAccessCount++;
         return new int[]{bytesRead, segments.size()};
     }
 
@@ -172,7 +173,7 @@ public class MergeSort {
                 // there's no more elements of run_i
                 if (indexArray[i] == runs_page[i].size()) {
                     UtilsIOSegments.ArrayBytesRead answer = UtilsIOSegments.readPage(inputs.get(i), offset[i]);
-                    memoryAccesCount++;
+                    memoryAccessCount++;
                     runs_page[i] = answer.segments;
                     offset[i] += answer.bytesRead;
                     indexArray[i] = (runs_page[i].size()==0) ? -1 : 0;
@@ -197,10 +198,10 @@ public class MergeSort {
             indexArray[min_index]++;
             // add the minimum to out
             boolean savedInMemory = fileOut.saveSegment(min);
-            if(savedInMemory) memoryAccesCount++;
+            if(savedInMemory) memoryAccessCount++;
         }
         boolean savedInMemory = fileOut.close();
-        if(savedInMemory) memoryAccesCount++;
+        if(savedInMemory) memoryAccessCount++;
         return fileOut;
     }
 
