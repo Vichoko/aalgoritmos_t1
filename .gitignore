@@ -3,4 +3,5 @@
 *.iml
 .idea/
 .idea
-
+respaldo/
+.tmp
