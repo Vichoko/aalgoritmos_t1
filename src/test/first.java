@@ -29,7 +29,7 @@ public class first {
         File originalSegmentsFile = new File(originalSegmentsFileName);
         System.err.println("    done");
         System.err.println("Lauching DistributionSweep...");
-        DistributionSweep ds = new DistributionSweep(originalSegmentsFile);
+        DistributionSweep ds = new DistributionSweep(originalSegmentsFile, m_segmentQuantity );
         String outFileName = "t_first#" +   System.currentTimeMillis() + ".txt";
         ds.getIntersections(outFileName);
         System.err.println("    Done [DistributionSweep]");

@@ -20,6 +20,7 @@ public class MergeSort {
     private String outputFilename;
     private int verticalSegmentsNo;
     String suid;
+    int segmentsQuantity;
     public int getVerticalSegmentsNo() {
         return verticalSegmentsNo;
     }
@@ -27,9 +28,9 @@ public class MergeSort {
 
 
     public static void main(String[] args){
-        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495063006490.txt"));
-        String filename = mergeSort.sort();
-        System.out.println("Segments sorted in "+filename);
+        //MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495063006490.txt"));
+       // String filename = mergeSort.sort();
+        //System.out.println("Segments sorted in "+filename);
     }
 
 
@@ -39,8 +40,9 @@ public class MergeSort {
      *
      * @param axis      Sorts by this coordinate
      */
-    public MergeSort(EAxis axis, File inFile, String sid){
+    public MergeSort(EAxis axis, File inFile, String sid, int segmentsQuantity){
         suid = sid;
+        this.segmentsQuantity = segmentsQuantity;
         verticalSegmentsNo = -1;
         segmentsComparator = (axis==EAxis.X) ? new SegmentComparatorX() : new SegmentComparatorY();
         try{
@@ -52,8 +54,8 @@ public class MergeSort {
         }
     }
 
-    public MergeSort(EAxis axis, File inFile){
-        this(axis,inFile, Double.toString(System.currentTimeMillis()));
+    public MergeSort(EAxis axis, File inFile, int segmentsQuantity){
+        this(axis,inFile, Double.toString(System.currentTimeMillis()), segmentsQuantity);
     }
 
 
@@ -64,7 +66,7 @@ public class MergeSort {
         long segmentsRead = 0;
         int runCount = 0; // id run
         long bytesRead = 0;
-        while (segmentsRead < TOTAL_SEGMENTS){
+        while (segmentsRead < segmentsQuantity){
             runCount++;
             int[] read = readSortRun(runCount, bytesRead);
             bytesRead += read[0];

@@ -8,7 +8,6 @@ import utils.Constants;
 import java.io.*;
 import java.util.ArrayList;
 
-import static utils.Constants.DEBUG;
 import static utils.Constants.TOTAL_SEGMENTS;
 
 /**
@@ -36,7 +35,7 @@ public class acurracyTest {
         BruteforceDetection brutus = new BruteforceDetection(originalSegments, "acurracyTestOutfile");
 
         System.err.println("Lauching DistributionSweep...");
-        DistributionSweep ds = new DistributionSweep(originalSegmentsFile);
+        DistributionSweep ds = new DistributionSweep(originalSegmentsFile, m_segmentQuantity );
         String outFileName = "t_first#" +   System.currentTimeMillis() + ".txt";
         ds.getIntersections(outFileName);
         System.err.println("    Done [DistributionSweep]");

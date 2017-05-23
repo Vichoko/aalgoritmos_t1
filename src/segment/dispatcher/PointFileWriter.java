@@ -1,6 +1,7 @@
 package segment.dispatcher;
 
 import static utils.Constants.B;
+import static utils.Constants.INTERS_COUNTER;
 
 public class PointFileWriter extends FileWriter {
 
@@ -16,6 +17,7 @@ public class PointFileWriter extends FileWriter {
     }
 
     public void savePoint(double x, double y){
+        INTERS_COUNTER++;
         checkCapacity();
         sb.append(truncateTo3dec(x)).append(",").append(truncateTo3dec(y)).append(",\n");
         elementsCount++;

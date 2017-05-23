@@ -9,6 +9,7 @@ import java.io.RandomAccessFile;
 import java.util.ArrayList;
 
 import static utils.Constants.B;
+import static utils.Constants.IO_COUNTER;
 
 public class UtilsIOSegments {
     /**
@@ -93,6 +94,7 @@ public class UtilsIOSegments {
         try {
             input.seek(startOffset);
             input.read(buffer);
+            IO_COUNTER++;
         } catch (IOException e) {
             e.printStackTrace();
         }

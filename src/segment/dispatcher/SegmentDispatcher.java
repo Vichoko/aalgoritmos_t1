@@ -53,6 +53,7 @@ abstract class FileWriter{
 
     private void writePage(){
         pw.write(sb.toString());
+        IO_COUNTER++;
     }
     double truncateTo3dec(double src){
         return Math.floor(src*1000)/1000;

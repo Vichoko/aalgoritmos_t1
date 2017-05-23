@@ -26,7 +26,7 @@ public class bigMS {
         String originalSegmentsFileName = sg.generateSegments();
         File originalSegmentsFile = new File(originalSegmentsFileName);
 
-        MergeSort xSort = new MergeSort(Constants.EAxis.X, originalSegmentsFile, "_x_");
+        MergeSort xSort = new MergeSort(Constants.EAxis.X, originalSegmentsFile, "_x_", m_segmentQuantity);
 
         System.out.print(xSort.sort());
         // check outFileName for intersections
