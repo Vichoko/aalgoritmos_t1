@@ -1,4 +1,4 @@
-package segment.dispatcher;
+package segment.writer;
 
 /**
  * Writes in a temporary file (it's deleted when program ends)

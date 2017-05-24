@@ -2,9 +2,9 @@ package algorithm;
 
 import algorithm.sort.comparators.SegmentComparatorX;
 import segment.Segment;
-import segment.dispatcher.PointFileWriter;
-import segment.dispatcher.SegmentWriter;
-import segment.dispatcher.SegmentWriterTemporary;
+import segment.writer.PointFileWriter;
+import segment.writer.SegmentWriter;
+import segment.writer.SegmentWriterTemporary;
 import algorithm.sort.MergeSort;
 import utils.*;
 

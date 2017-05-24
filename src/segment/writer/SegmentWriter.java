@@ -1,15 +1,10 @@
-package segment.dispatcher;
+package segment.writer;
 
 import segment.Segment;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-
-import static java.lang.System.exit;
-import static utils.Constants.*;
 
 public class SegmentWriter extends FileWriter{
 
@@ -35,7 +30,7 @@ public class SegmentWriter extends FileWriter{
         String sy1= Double.toString(truncateTo3dec(y1));
         String sx2 = Double.toString(truncateTo3dec(x2));
         String sy2= Double.toString(truncateTo3dec(y2));
-        int lenString = sx1.length()+sy1.length()+sx2.length()+sy2.length()+6;
+        int lenString = sx1.length()+sy1.length()+sx2.length()+sy2.length()+5;
         boolean b = checkCapacity(lenString);
         sb.append(sx1).append(",").append(sy1).append(",").append(sx2).append(",").append(sy2).append(",\n");
         bytesCount += lenString;

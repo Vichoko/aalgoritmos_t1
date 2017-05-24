@@ -5,7 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 
-import segment.dispatcher.SegmentWriter;
+import segment.writer.SegmentWriter;
 import segment.Segment;
 import algorithm.sort.comparators.*;
 import utils.UtilsIOSegments;
@@ -20,11 +20,10 @@ public class MergeSort {
     private SegmentComparator segmentsComparator;
     private int verticalSegmentsNo;
     private String id;
-    long memoryAccessCount1;
-    long memoryAccessCount2;
-    int mergesCount;
+    private long memoryAccessCount1;
+    private long memoryAccessCount2;
+    private int mergesCount;
 
-    @SuppressWarnings("unchecked")
     public static void main(String[] args){
         TOTAL_SEGMENTS = (int) Math.pow(2, Integer.parseInt(args[0]));
         System.out.println(">>>TESTING: "+TOTAL_SEGMENTS+" , file:"+args[1]);

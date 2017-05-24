@@ -1,7 +1,7 @@
 package algorithm;
 
 import segment.Segment;
-import segment.dispatcher.PointFileWriter;
+import segment.writer.PointFileWriter;
 
 import java.util.ArrayList;
 

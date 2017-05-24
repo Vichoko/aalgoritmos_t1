@@ -1,6 +1,4 @@
-package segment.dispatcher;
-
-import static utils.Constants.B;
+package segment.writer;
 
 public class PointFileWriter extends FileWriter {
 

@@ -1,8 +1,8 @@
 package utils;
 
 import segment.Segment;
-import segment.dispatcher.SegmentWriter;
-import segment.dispatcher.SegmentWriterTemporary;
+import segment.writer.SegmentWriter;
+import segment.writer.SegmentWriterTemporary;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;

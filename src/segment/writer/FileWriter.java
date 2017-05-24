@@ -1,4 +1,4 @@
-package segment.dispatcher;
+package segment.writer;
 
 import utils.Constants;
 

@@ -1,6 +1,6 @@
 package segment;
 
-import segment.dispatcher.SegmentWriter;
+import segment.writer.SegmentWriter;
 import utils.random.IRandom;
 import utils.random.NormalRandom;
 import utils.random.UniformRandom;
@@ -40,7 +40,7 @@ public class SegmentGenerator {
 
     /***
      * Creates the vertical and horizontal segments
-     * And uses segment.dispatcher to write them in a file
+     * And uses segment.writer to write them in a file
      */
     public String generateSegments(){
         String filename = n+"_a="+a+"_";
