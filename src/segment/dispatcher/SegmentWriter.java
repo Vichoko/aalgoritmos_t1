@@ -11,24 +11,18 @@ import java.util.ArrayList;
 import static java.lang.System.exit;
 import static utils.Constants.*;
 
-public class SegmentDispatcher extends FileWriter{
+public class SegmentWriter extends FileWriter{
 
-    public SegmentDispatcher(String pathname){
+    public SegmentWriter(String pathname){
         super(pathname);
         // 8bytes*4 + 5bytes = 37 bytes
         // B size page, B/37 = #segments that fit in a page
-        maxElements = B/37;
         try {
             file = new File(pathname+".txt");
             pw = new PrintWriter(file);
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    @Override
-    public void setMaxBytesRAM(int maxBytesRAM) {
-        this.maxElements = maxBytesRAM/37;
     }
 
     public boolean saveSegment(Segment segment){
@@ -41,9 +35,10 @@ public class SegmentDispatcher extends FileWriter{
         String sy1= Double.toString(truncateTo3dec(y1));
         String sx2 = Double.toString(truncateTo3dec(x2));
         String sy2= Double.toString(truncateTo3dec(y2));
-        boolean b = checkCapacity();
+        int lenString = sx1.length()+sy1.length()+sx2.length()+sy2.length()+6;
+        boolean b = checkCapacity(lenString);
         sb.append(sx1).append(",").append(sy1).append(",").append(sx2).append(",").append(sy2).append(",\n");
-        elementsCount++;
+        bytesCount += lenString;
         return b;
     }
 }

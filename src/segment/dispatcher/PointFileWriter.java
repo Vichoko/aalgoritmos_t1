@@ -6,18 +6,14 @@ public class PointFileWriter extends FileWriter {
 
     public PointFileWriter(String pathname) {
         super(pathname);
-        // 8*2 + 3 = 16
-        maxElements = B/16;
-    }
-
-    @Override
-    public void setMaxBytesRAM(int maxBytesRAM) {
-        this.maxElements = maxBytesRAM/16;
     }
 
     public void savePoint(double x, double y){
-        checkCapacity();
-        sb.append(truncateTo3dec(x)).append(",").append(truncateTo3dec(y)).append(",\n");
-        elementsCount++;
+        String sX = ""+truncateTo3dec(x);
+        String sY = ""+truncateTo3dec(y);
+        int lenString = sX.length()+sY.length()+3;
+        checkCapacity(lenString);
+        sb.append(sX).append(",").append(sY).append(",\n");
+        bytesCount += lenString;
     }
 }

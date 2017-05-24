@@ -25,8 +25,8 @@ public class BruteforceDetection {
         interCounter = 0;
         m_array = array;
         answerFile = new PointFileWriter(outfilename);
-        ArrayList<Segment> verticals = new ArrayList<>();
-        ArrayList<Segment> horizotals = new ArrayList<>();
+        ArrayList<Segment> verticals = new ArrayList<Segment>();
+        ArrayList<Segment> horizotals = new ArrayList<Segment>();
         if (DEBUG) {System.err.println("Separating segments...");}
         for (Segment s : array){
             if (s.isVertical()){

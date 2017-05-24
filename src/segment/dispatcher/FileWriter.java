@@ -1,5 +1,7 @@
 package segment.dispatcher;
 
+import utils.Constants;
+
 import java.io.File;
 import java.io.PrintWriter;
 
@@ -8,13 +10,18 @@ public abstract class FileWriter{
     File file;
     StringBuilder sb;
     private String pathname;
-    int maxElements;
-    int elementsCount;
+    private int maxBytes;
+    int bytesCount;
 
     FileWriter(String pathname) {
         this.pathname = pathname;
         sb = new StringBuilder();
-        elementsCount = 0;
+        bytesCount = 0;
+        this.maxBytes = Constants.B;
+    }
+
+    public void setMaxBytes(int maxBytes) {
+        this.maxBytes = maxBytes;
     }
 
     public String getPathname() {
@@ -24,8 +31,6 @@ public abstract class FileWriter{
     public void setDeleteOnExit(){
         file.deleteOnExit();
     }
-
-    abstract public void setMaxBytesRAM(int maxBytesRAM);
 
     public boolean close(){
         if (sb.length()!=0) {
@@ -37,10 +42,10 @@ public abstract class FileWriter{
         return false;
     }
 
-    boolean checkCapacity(){
-        if (elementsCount+1 >= maxElements){
+    boolean checkCapacity(int bytesToAdd){
+        if (bytesCount+bytesToAdd > maxBytes){
             writePage();
-            elementsCount = 0;
+            bytesCount = 0;
             sb.setLength(0);
             return true;
         }

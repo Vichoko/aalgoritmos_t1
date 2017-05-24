@@ -1,8 +1,8 @@
 package utils;
 
 import segment.Segment;
-import segment.dispatcher.SegmentDispatcher;
-import segment.dispatcher.SegmentDispatcherTemporary;
+import segment.dispatcher.SegmentWriter;
+import segment.dispatcher.SegmentWriterTemporary;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -23,7 +23,7 @@ public class UtilsIOSegments {
         int points = 0;
         double[] coordinates = new double[4];
         StringBuilder stringNextNumber = new StringBuilder();
-        ArrayList<Segment> segments = new ArrayList<>();
+        ArrayList<Segment> segments = new ArrayList<Segment>();
         int bytesRead = 0;
         for (int i = 0; i < buffer.length; i++) {
             byte b = buffer[i];
@@ -54,7 +54,7 @@ public class UtilsIOSegments {
      * @param nameFile file name
      */
     public static void saveSegmentsTempFile(ArrayList<Segment> segments, String nameFile) {
-        SegmentDispatcher dispatcher = new SegmentDispatcherTemporary(nameFile);
+        SegmentWriter dispatcher = new SegmentWriterTemporary(nameFile);
         for (Segment segment: segments){
             dispatcher.saveSegment(segment.x1, segment.y1, segment.x2, segment.y2);
         }

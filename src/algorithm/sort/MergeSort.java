@@ -5,7 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 
-import segment.dispatcher.SegmentDispatcher;
+import segment.dispatcher.SegmentWriter;
 import segment.Segment;
 import algorithm.sort.comparators.*;
 import utils.UtilsIOSegments;
@@ -20,18 +20,24 @@ public class MergeSort {
     private SegmentComparator segmentsComparator;
     private int verticalSegmentsNo;
     private String id;
-    private long memoryAccessCount;
+    long memoryAccessCount1;
+    long memoryAccessCount2;
+    int mergesCount;
 
-
+    @SuppressWarnings("unchecked")
     public static void main(String[] args){
-        MergeSort mergeSort = new MergeSort(EAxis.X, new File("2097152_1495595657209.txt"));
+        TOTAL_SEGMENTS = (int) Math.pow(2, Integer.parseInt(args[0]));
+        System.out.println(">>>TESTING: "+TOTAL_SEGMENTS+" , file:"+args[1]);
+        MergeSort mergeSort = new MergeSort(EAxis.X, new File(args[1]+".txt"));
         Instant start = Instant.now();
         String filename = mergeSort.sort();
         Instant end = Instant.now();
-        System.out.println("--------------------------------------");
-        System.out.println(Duration.between(start, end));
+        System.out.println("Seconds: "+Duration.between(start, end).getSeconds());
+        System.out.println("Number merges "+mergeSort.mergesCount);
         System.out.println("Segments sorted in "+filename);
-        System.out.println("Number access secondary memory:"+mergeSort.getMemoryAccessCount());
+        System.out.println("Number access 1st: "+mergeSort.memoryAccessCount1);
+        System.out.println("Number access 2nd: "+mergeSort.memoryAccessCount2);
+        System.out.println("--------------------------------------");
     }
 
     /**
@@ -42,7 +48,8 @@ public class MergeSort {
      */
     public MergeSort(EAxis axis, File inFile, String id){
         this.id = id;
-        memoryAccessCount = 0;
+        memoryAccessCount1 = 0;
+        memoryAccessCount2 = 0;
         verticalSegmentsNo = -1;
         segmentsComparator = (axis==EAxis.X) ? new SegmentComparatorX() : new SegmentComparatorY();
         try{
@@ -62,10 +69,6 @@ public class MergeSort {
         return verticalSegmentsNo;
     }
 
-    public long getMemoryAccessCount() {
-        return memoryAccessCount;
-    }
-
     /***
      * Sorts the segments of the file specified in the constructor
      * @return the filename with the segments sorted
@@ -77,12 +80,13 @@ public class MergeSort {
         int runCount = 0; // id run
         long bytesRead = 0;
         while (segmentsRead < TOTAL_SEGMENTS){
-            System.out.println("reading sorting runs");
+            //System.out.println("reading sorting runs");
             runCount++;
             int[] read = readSortRun(runCount, bytesRead);
             bytesRead += read[0];
             segmentsRead += read[1];
         }
+        System.out.println("Runs generated "+runCount);
         // second stage: merge
         String filenameOut = mergeRuns(runCount);
         return filenameOut;
@@ -107,7 +111,7 @@ public class MergeSort {
         }
         // get Segment objects from byte data
         UtilsIOSegments.ArrayBytesRead answer = UtilsIOSegments.getSegments(buffer);
-        memoryAccessCount++;
+        memoryAccessCount1+=M/B;
         ArrayList<Segment> segments = answer.segments;
         int bytesRead = answer.bytesRead;
         segments.sort(segmentsComparator);
@@ -119,7 +123,7 @@ public class MergeSort {
         }
         // Save temporary file
         UtilsIOSegments.saveSegmentsTempFile(segments, "Run_"+runName+"_"+id);
-        memoryAccessCount++;
+        memoryAccessCount1+=M/B;
         return new int[]{bytesRead, segments.size()};
     }
 
@@ -133,11 +137,13 @@ public class MergeSort {
         int filesMerged = 0; // id run to be read next
         int m = M/B; // pages that fit in RAM
         int numberLastFile = totalRuns; // id for file name
-        SegmentDispatcher segmentDispatcher = null;
+        SegmentWriter segmentWriter = null;
         // break: when we've read all the runs and there's just one file left
+        mergesCount = 0;
         while(filesMerged < totalRuns && filesMerged+1 < numberLastFile) {
-            if (segmentDispatcher!=null) segmentDispatcher.setDeleteOnExit();
-            ArrayList<RandomAccessFile> inputs = new ArrayList<>();
+            mergesCount++;
+            if (segmentWriter!=null) segmentWriter.setDeleteOnExit();
+            ArrayList<RandomAccessFile> inputs = new ArrayList<RandomAccessFile>();
             // read next m-1 while there is more runs to read
             int i;
             for (i= 0; i < m-1 && i+filesMerged < numberLastFile; i++) {
@@ -150,7 +156,8 @@ public class MergeSort {
                 }
             }
             // Merge
-            segmentDispatcher = mergeMRuns(inputs, "Run_"+(++numberLastFile)+"_"+id);
+            //System.out.println("Merging m runs "+mergesCount);
+            segmentWriter = mergeMRuns(inputs, "Run_"+(++numberLastFile)+"_"+id);
             totalRuns++;
             filesMerged += i;
         }
@@ -162,16 +169,14 @@ public class MergeSort {
      *  @param inputs    Files with segments sorted
      *  @param nameFile  Name for the temporary file
      */
-    private SegmentDispatcher mergeMRuns(ArrayList<RandomAccessFile> inputs, String nameFile) {
-        System.out.println("Merging m runs");
+    private SegmentWriter mergeMRuns(ArrayList<RandomAccessFile> inputs, String nameFile) {
         int totalInputs = inputs.size();
-        SegmentDispatcher fileOut = new SegmentDispatcher(nameFile);
-        fileOut.setMaxBytesRAM(B);
+        SegmentWriter fileOut = new SegmentWriter(nameFile);
         int[] offset = new int[totalInputs];
         ArrayList<Segment>[] runs_page = new ArrayList[totalInputs];
         int[] indexArray = new int[totalInputs];
         for (int i = 0; i < totalInputs; i++) {
-            runs_page[i] = new ArrayList<>();
+            runs_page[i] = new ArrayList<Segment>();
         }
         while (true) {
             // find the minimum among all min elements of each run
@@ -181,7 +186,7 @@ public class MergeSort {
                 // there's no more elements of run_i
                 if (indexArray[i] == runs_page[i].size()) {
                     UtilsIOSegments.ArrayBytesRead answer = UtilsIOSegments.readPage(inputs.get(i), offset[i]);
-                    memoryAccessCount++;
+                    memoryAccessCount2++;
                     runs_page[i] = answer.segments;
                     offset[i] += answer.bytesRead;
                     indexArray[i] = (runs_page[i].size()==0) ? -1 : 0;
@@ -206,10 +211,10 @@ public class MergeSort {
             indexArray[min_index]++;
             // add the minimum to out
             boolean savedInMemory = fileOut.saveSegment(min);
-            if(savedInMemory) memoryAccessCount++;
+            if(savedInMemory) memoryAccessCount2++;
         }
         boolean savedInMemory = fileOut.close();
-        if(savedInMemory) memoryAccessCount++;
+        if(savedInMemory) memoryAccessCount2++;
         return fileOut;
     }
 
