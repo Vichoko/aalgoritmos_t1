@@ -30,6 +30,7 @@ public abstract class FileWriter{
     public boolean close(){
         if (sb.length()!=0) {
             writePage();
+            pw.close();
             return true;
         }
         pw.close();

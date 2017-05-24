@@ -1,6 +1,8 @@
 package algorithm.sort;
 
 import java.io.*;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 
 import segment.dispatcher.SegmentDispatcher;
@@ -22,8 +24,11 @@ public class MergeSort {
 
 
     public static void main(String[] args){
-        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495568283620.txt"));
+        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495593867632.txt"));
+        Instant start = Instant.now();
         String filename = mergeSort.sort();
+        Instant end = Instant.now();
+        System.out.println(Duration.between(start, end));
         System.out.println("Segments sorted in "+filename);
         System.out.println("Number access secondary memory:"+mergeSort.getMemoryAccessCount());
     }
