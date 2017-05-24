@@ -24,10 +24,11 @@ public class MergeSort {
 
 
     public static void main(String[] args){
-        MergeSort mergeSort = new MergeSort(EAxis.X, new File("1495593867632.txt"));
+        MergeSort mergeSort = new MergeSort(EAxis.X, new File("2097152_1495595657209.txt"));
         Instant start = Instant.now();
         String filename = mergeSort.sort();
         Instant end = Instant.now();
+        System.out.println("--------------------------------------");
         System.out.println(Duration.between(start, end));
         System.out.println("Segments sorted in "+filename);
         System.out.println("Number access secondary memory:"+mergeSort.getMemoryAccessCount());
@@ -76,6 +77,7 @@ public class MergeSort {
         int runCount = 0; // id run
         long bytesRead = 0;
         while (segmentsRead < TOTAL_SEGMENTS){
+            System.out.println("reading sorting runs");
             runCount++;
             int[] read = readSortRun(runCount, bytesRead);
             bytesRead += read[0];
@@ -161,6 +163,7 @@ public class MergeSort {
      *  @param nameFile  Name for the temporary file
      */
     private SegmentDispatcher mergeMRuns(ArrayList<RandomAccessFile> inputs, String nameFile) {
+        System.out.println("Merging m runs");
         int totalInputs = inputs.size();
         SegmentDispatcher fileOut = new SegmentDispatcher(nameFile);
         fileOut.setMaxBytesRAM(B);

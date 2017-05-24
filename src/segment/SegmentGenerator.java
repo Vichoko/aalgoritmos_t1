@@ -43,7 +43,7 @@ public class SegmentGenerator {
      * And uses segment.dispatcher to write them in a file
      */
     public String generateSegments(){
-        String filename = Long.toString(System.currentTimeMillis());
+        String filename = n+"_"+Long.toString(System.currentTimeMillis());
         SegmentDispatcher dispatcher = new SegmentDispatcher(filename);
         IRandom uniformXRand = new UniformRandom(X_MAX);
         IRandom uniformYRand = new UniformRandom(Y_MAX);
