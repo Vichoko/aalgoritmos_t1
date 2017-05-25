@@ -2,9 +2,9 @@ package algorithm;
 
 import algorithm.sort.comparators.SegmentComparatorX;
 import segment.Segment;
-import segment.dispatcher.PointFileWriter;
-import segment.dispatcher.SegmentDispatcher;
-import segment.dispatcher.SegmentDispatcherTemporary;
+import segment.writer.PointFileWriter;
+import segment.writer.SegmentWriter;
+import segment.writer.SegmentWriterTemporary;
 import algorithm.sort.MergeSort;
 import utils.*;
 
@@ -43,7 +43,7 @@ public class DistributionSweep {
         int verticalSegmentsNo = xSort.getVerticalSegmentsNo();
         if (DEBUG) System.err.println("Starting DS Secondary-Memory Recursion...");
         Instant start = Instant.now();
-        recursiveDistributionSweep(xSortFilename + ".tmp", 0, (int) inputFile.length(),0,Integer.MAX_VALUE,ySortFilename + ".tmp", verticalSegmentsNo);
+        recursiveDistributionSweep(xSortFilename + ".txt", 0, (int) inputFile.length(),0,Integer.MAX_VALUE,ySortFilename + ".txt", verticalSegmentsNo);
         Instant end = Instant.now();
         if (DEBUG) System.err.println(" Done Priamry-Memory recursion.");
         System.out.println("Time elapsed for DS Algorithm is "+ Duration.between(start, end));
@@ -56,7 +56,7 @@ public class DistributionSweep {
  ************************************************************************************************************************************************** *
  */
     /**
-     * Should return memory usage of the software, based on the attributes recieved.
+     * Returns memory usage of the software, based on the attributes received.
      *
      * @param beginOffset In bytes, offset in segment file where to start reading.
      * @param endOffset   In bytes, offset in segment file where to stop reading.
@@ -151,19 +151,19 @@ public class DistributionSweep {
             // need auxiliary activeVertical for deletions
             ArrayDeque<Segment>[] activeVerticalsAux = new ArrayDeque[slabs.size()];
             RandomAccessFile[] activeVerticalFilesAux = new RandomAccessFile[slabs.size()];
-            SegmentDispatcher[] yRecursiveSlabFiles = new SegmentDispatcher[slabs.size()];
+            SegmentWriter[] yRecursiveSlabFiles = new SegmentWriter[slabs.size()];
             boolean[] horizontalNotComplete = new boolean[slabs.size()];
             for (int i = 0; i < slabs.size(); i++) { // init slab dependant objects
-                activeVerticals[i] = new ArrayDeque<>();
+                activeVerticals[i] = new ArrayDeque<Segment>();
                 activeVerticalFile[i] = new RandomAccessFile(new File(recursionNumber + "__activeVertical_" + i + ".txt"), "rw");
 
-                activeVerticalsAux[i] = new ArrayDeque<>();
+                activeVerticalsAux[i] = new ArrayDeque<Segment>();
                 activeVerticalFilesAux[i] = new RandomAccessFile(new File(recursionNumber + "__activeVertical_" + (slabs.size() + i) + ".txt"), "rw");
 
 
-                yRecursiveSlabFiles[i] = new SegmentDispatcherTemporary(recursionNumber + "__yRecursiveSlabFiles" + i);
+                yRecursiveSlabFiles[i] = new SegmentWriterTemporary(recursionNumber + "__yRecursiveSlabFiles" + i);
 
-                yRecursiveSlabFiles[i].setMaxBytesRAM(MAX_SIZE_DISPATCHER);
+                yRecursiveSlabFiles[i].setMaxBytes(MAX_SIZE_DISPATCHER);
                 horizontalNotComplete[i] = false;
             }
             RandomAccessFile ySegmentsSorted = new RandomAccessFile(ySortedFilename, "r");
@@ -206,7 +206,7 @@ public class DistributionSweep {
     }
 
     /**
-     * Read a File of Segments to an ArrayList. Supossing it fits in RAM!
+     * Read a File of Segments to an ArrayList. Supposing it fits in RAM!
      * Used at RAM recursion step.
      *
      * @param filename    name of the file
@@ -216,7 +216,7 @@ public class DistributionSweep {
      * @throws FileNotFoundException
      */
     public static ArrayList<Segment> SegmentFileToArray(String filename, int beginOffset, int endOffset, int beginIndex, int endIndex) throws FileNotFoundException {
-        ArrayList<Segment> array = new ArrayList<>();
+        ArrayList<Segment> array = new ArrayList<Segment>();
 
         int offset = beginOffset;
         RandomAccessFile raf = new RandomAccessFile(filename, "r");
@@ -324,7 +324,7 @@ public class DistributionSweep {
             // update aux references & blank old data
             activeVerticalFilesAux[slab] = swapAuxFile;
             activeVerticalFilesAux[slab].setLength(0);
-            activeVerticalsAux[slab] = new ArrayDeque<>();
+            activeVerticalsAux[slab] = new ArrayDeque<Segment>();
         }
     }
 
@@ -367,7 +367,7 @@ public class DistributionSweep {
      * @param horizontalNotComplete Where set to true the slabs that have segments not complete
      * @return first and last index where the segment is complete, if none then null
      */
-    private int[] getIndexSegment(Segment segment, ArrayList<Slab> slabs, SegmentDispatcher[] yHorizontalFiles,
+    private int[] getIndexSegment(Segment segment, ArrayList<Slab> slabs, SegmentWriter[] yHorizontalFiles,
                                   boolean[] horizontalNotComplete) {
         double i = Math.min(segment.x1, segment.x2);
         double j = Math.max(segment.x1, segment.x2);
@@ -514,12 +514,12 @@ public class DistributionSweep {
         }
 
         ArrayDeque<Segment>[] activeVerticals = new ArrayDeque[slabs.size()];
-        ArrayList<ArrayList<Segment>> slabRecursiveSegments = new ArrayList<>(slabs.size());
+        ArrayList<ArrayList<Segment>> slabRecursiveSegments = new ArrayList<ArrayList<Segment>>(slabs.size());
         boolean[] horizontalNotComplete = new boolean[slabs.size()];
 
         for (int i = 0; i < slabs.size(); i++) { // init slab dependant objects
-            activeVerticals[i] = new ArrayDeque<>();
-            slabRecursiveSegments.add(new ArrayList<>());
+            activeVerticals[i] = new ArrayDeque<Segment>();
+            slabRecursiveSegments.add(new ArrayList<Segment>());
             horizontalNotComplete[i] = false;
         }
         int offsetY = 0;
@@ -648,7 +648,7 @@ public class DistributionSweep {
             k = verticalSegmentsNumber;
         }
         int len = (int) Math.ceil(verticalSegmentsNumber / k);
-        ArrayList<Slab> slabs = new ArrayList<>();
+        ArrayList<Slab> slabs = new ArrayList<Slab>();
 
         int verticalCounter = 0;
 

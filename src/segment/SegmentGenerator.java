@@ -1,10 +1,11 @@
 package segment;
 
+import segment.writer.SegmentWriter;
 import utils.random.IRandom;
 import utils.random.NormalRandom;
 import utils.random.UniformRandom;
-import segment.dispatcher.SegmentDispatcher;
-import segment.dispatcher.SegmentDispatcherPermanent;
+
+import java.io.IOException;
 
 import static utils.Constants.*;
 
@@ -41,11 +42,14 @@ public class SegmentGenerator {
 
     /***
      * Creates the vertical and horizontal segments
-     * And uses segment.dispatcher to write them in a file
+     * And uses segment.writer to write them in a file
      */
-    public String generateSegments(){
-        String filename = Long.toString(System.currentTimeMillis()) + ".txt";
-        SegmentDispatcher dispatcher = new SegmentDispatcherPermanent(filename);
+    public String generateSegments() throws IOException {
+        String filename = n+"_a="+a+"_";
+        if (distribution==EDistribution.NORMAL) filename += "norm_";
+        else filename += "unif_";
+        filename += Long.toString(System.currentTimeMillis());
+        SegmentWriter dispatcher = new SegmentWriter(filename);
         IRandom uniformXRand = new UniformRandom(X_MAX);
         IRandom uniformYRand = new UniformRandom(Y_MAX);
         IRandom normalRand = new NormalRandom(NORMAL_MEAN, NORMAL_DEVIATION);
@@ -97,9 +101,16 @@ public class SegmentGenerator {
         return filename;
     }
 
-    public static void main(String[] args){
-        SegmentGenerator generator = new SegmentGenerator(TOTAL_SEGMENTS, EDistribution.NORMAL, 0.5);
+    public static void main(String[] args) throws IOException {
+        int exp = Integer.parseInt(args[0]);
+        TOTAL_SEGMENTS = (int) Math.pow(2, exp);
+        double alpha = Double.parseDouble(args[2]);
+        SegmentGenerator generator;
+        if(args[1].equals("Normal")) generator = new SegmentGenerator(TOTAL_SEGMENTS,
+                                                                      EDistribution.NORMAL,
+                                                                      alpha);
+        else generator = new SegmentGenerator(TOTAL_SEGMENTS, EDistribution.UNIFORM, alpha);
         String filename = generator.generateSegments();
-        System.out.println("Segments created in "+filename);
+        System.out.println(exp+" "+filename);
     }
 }

@@ -4,7 +4,6 @@ import algorithm.DistributionSweep;
 import segment.SegmentGenerator;
 import utils.Constants;
 
-import javax.swing.text.EditorKit;
 import java.io.File;
 import java.io.IOException;
 
@@ -53,7 +52,7 @@ public class DSTest {
         DistributionSweep ds = new DistributionSweep(originalSegmentsFile);
         String outFileName = "DSTEST_#" +   System.currentTimeMillis() + ".txt";
         ds.getIntersections(outFileName);
-        System.err.println("    Done [DistributionSweep] test " + ++testno);
+        System.err.println("    Done [DistributionSweep] test " + testno);
         System.err.println("Intersections found: " + INTERS_COUNTER);
         System.err.println("I/O Accesses: " + IO_COUNTER);
         System.err.println("");
