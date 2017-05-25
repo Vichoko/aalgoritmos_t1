@@ -24,7 +24,7 @@ public class MergeSort {
     private long memoryAccessCount2;
     private int mergesCount;
 
-    public static void main(String[] args){
+    public static void main(String[] args) throws IOException {
         TOTAL_SEGMENTS = (int) Math.pow(2, Integer.parseInt(args[0]));
         System.out.println(">>>TESTING: "+TOTAL_SEGMENTS+" , file:"+args[1]);
         MergeSort mergeSort = new MergeSort(EAxis.X, new File(args[1]+".txt"));
@@ -168,7 +168,7 @@ public class MergeSort {
      *  @param inputs    Files with segments sorted
      *  @param nameFile  Name for the temporary file
      */
-    private SegmentWriter mergeMRuns(ArrayList<RandomAccessFile> inputs, String nameFile) {
+    private SegmentWriter mergeMRuns(ArrayList<RandomAccessFile> inputs, String nameFile) throws IOException {
         int totalInputs = inputs.size();
         SegmentWriter fileOut = new SegmentWriter(nameFile);
         int[] offset = new int[totalInputs];
