@@ -29,6 +29,5 @@ public final class Constants {
 
     //TESTING
     public static int IO_COUNTER = 0;
-    public static int INTERS_COUNTER = 0;
 
 }
