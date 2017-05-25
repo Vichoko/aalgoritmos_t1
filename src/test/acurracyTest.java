@@ -8,7 +8,6 @@ import utils.Constants;
 import java.io.*;
 import java.util.ArrayList;
 
-import static utils.Constants.DEBUG;
 import static utils.Constants.TOTAL_SEGMENTS;
 
 /**
@@ -20,13 +19,12 @@ public class acurracyTest {
         // TODO: Parsing?
         System.out.println("Starting acurracyTest");
 
-        int m_segmentQuantity = TOTAL_SEGMENTS;
         Constants.EDistribution m_segmentDistribution = Constants.EDistribution.NORMAL;
         double m_segmentClassBalance = 0.50;
 
         System.err.println("Starting first test.");
         System.err.println("Generating segments...");
-        SegmentGenerator sg = new SegmentGenerator(m_segmentQuantity,
+        SegmentGenerator sg = new SegmentGenerator(TOTAL_SEGMENTS,
                 m_segmentDistribution, m_segmentClassBalance);
         String originalSegmentsFileName = sg.generateSegments();
         File originalSegmentsFile = new File(originalSegmentsFileName);

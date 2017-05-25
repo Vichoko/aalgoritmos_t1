@@ -27,7 +27,6 @@ public class DistributionSweep {
     private final int MAX_SIZE_ACTIVE_LIST = 2 * (B - 26) / 3;
     private final int MAX_SIZE_DISPATCHER = (B - 26) / 3;
     private int recursionNumber = 0;
-    public int intersectionCounter = 0;
 
     public DistributionSweep(File inputFile) {
         this.inputFile = inputFile;
@@ -44,7 +43,7 @@ public class DistributionSweep {
         int verticalSegmentsNo = xSort.getVerticalSegmentsNo();
         if (DEBUG) System.err.println("Starting DS Secondary-Memory Recursion...");
         Instant start = Instant.now();
-        recursiveDistributionSweep(xSortFilename + ".tmp", 0, (int) inputFile.length(),0,Integer.MAX_VALUE,ySortFilename + ".tmp", verticalSegmentsNo);
+        recursiveDistributionSweep(xSortFilename + ".txt", 0, (int) inputFile.length(),0,Integer.MAX_VALUE,ySortFilename + ".txt", verticalSegmentsNo);
         Instant end = Instant.now();
         if (DEBUG) System.err.println(" Done Priamry-Memory recursion.");
         System.out.println("Time elapsed for DS Algorithm is "+ Duration.between(start, end));
@@ -295,7 +294,6 @@ public class DistributionSweep {
                 double y = Math.max(s.y1, s.y2);
                 if (y >= sweepLineHeight) { // save intersection & mantain in active segments
                     answerFile.savePoint(s.x1, sweepLineHeight);
-                    intersectionCounter++;
                     addToActiveVerticals(activeVerticalsAux[slab],
                             activeVerticalFilesAux[slab], s); // add to updated newActiveVertical list
                 }
@@ -311,7 +309,6 @@ public class DistributionSweep {
                     double y = Math.max(s.y1, s.y2);
                     if (y >= sweepLineHeight) {
                         answerFile.savePoint(s.x1, sweepLineHeight);
-                        intersectionCounter++;
                         addToActiveVerticals(activeVerticalsAux[slab],
                                 activeVerticalFilesAux[slab], s); // add to updated newActiveVertical list
                     }
@@ -350,6 +347,7 @@ public class DistributionSweep {
             }
             try {
                 randomAccessFile.writeUTF(toFile.toString());
+                IO_COUNTER++;
             } catch (IOException e) {
                 System.err.println("algorithm.DistributionSweep:: Error writing in file");
                 System.err.println(e.toString());
@@ -579,7 +577,6 @@ public class DistributionSweep {
                 if (fSegment.x1 >= xi && fSegment.x1 <= xj && s.y1 >= yi && s.y1 <= yj) {
                     // hay interseccion
                     answerFile.savePoint(fSegment.x1, s.y1);
-                    intersectionCounter++;
                 }
             }
         }
@@ -601,7 +598,6 @@ public class DistributionSweep {
                     activeVerticals[slab].remove(s);
                 } else {
                     answerFile.savePoint(s.x1, sweepLineHeight); // TODO: Considerar guardarlo directamente en buffer en RAM
-                    intersectionCounter++;
                 }
             }
         }

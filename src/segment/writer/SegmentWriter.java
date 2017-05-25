@@ -8,7 +8,7 @@ import java.io.PrintWriter;
 
 public class SegmentWriter extends FileWriter{
 
-    public SegmentWriter(String pathname){
+    public SegmentWriter(String pathname) throws IOException {
         super(pathname);
         // 8bytes*4 + 5bytes = 37 bytes
         // B size page, B/37 = #segments that fit in a page

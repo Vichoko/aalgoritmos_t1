@@ -9,6 +9,7 @@ import java.io.RandomAccessFile;
 import java.util.ArrayList;
 
 import static utils.Constants.B;
+import static utils.Constants.IO_COUNTER;
 
 public class UtilsIOSegments {
     /**
@@ -53,7 +54,7 @@ public class UtilsIOSegments {
      * @param segments  segments to be save
      * @param nameFile file name
      */
-    public static void saveSegmentsTempFile(ArrayList<Segment> segments, String nameFile) {
+    public static void saveSegmentsTempFile(ArrayList<Segment> segments, String nameFile) throws IOException {
         SegmentWriter dispatcher = new SegmentWriterTemporary(nameFile);
         for (Segment segment: segments){
             dispatcher.saveSegment(segment.x1, segment.y1, segment.x2, segment.y2);
@@ -93,6 +94,7 @@ public class UtilsIOSegments {
         try {
             input.seek(startOffset);
             input.read(buffer);
+            IO_COUNTER++;
         } catch (IOException e) {
             e.printStackTrace();
         }

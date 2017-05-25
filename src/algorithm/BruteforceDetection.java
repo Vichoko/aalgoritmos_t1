@@ -3,6 +3,7 @@ package algorithm;
 import segment.Segment;
 import segment.writer.PointFileWriter;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import static utils.Constants.DEBUG;
@@ -19,12 +20,15 @@ public class BruteforceDetection {
 
 
     public BruteforceDetection(ArrayList<Segment> array,
-                               String outfilename)
+                               String outfilename) throws IOException {
+        this(array, new PointFileWriter(outfilename));
+    }
+    public BruteforceDetection(ArrayList<Segment> array,
+                               PointFileWriter answerFile)
     {
         if (DEBUG) {System.err.println("Starting Bruteforce Detection");}
         interCounter = 0;
         m_array = array;
-        answerFile = new PointFileWriter(outfilename);
         ArrayList<Segment> verticals = new ArrayList<Segment>();
         ArrayList<Segment> horizotals = new ArrayList<Segment>();
         if (DEBUG) {System.err.println("Separating segments...");}

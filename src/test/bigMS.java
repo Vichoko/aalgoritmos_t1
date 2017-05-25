@@ -17,11 +17,10 @@ public class bigMS {
     public static void main(String[] args) throws IOException {
         // Variables
         // TODO: Parsing?
-        int m_segmentQuantity = TOTAL_SEGMENTS;
         Constants.EDistribution m_segmentDistribution = Constants.EDistribution.NORMAL;
         double m_segmentClassBalance = 0.50;
 
-        SegmentGenerator sg = new SegmentGenerator(m_segmentQuantity,
+        SegmentGenerator sg = new SegmentGenerator(TOTAL_SEGMENTS,
                 m_segmentDistribution, m_segmentClassBalance);
         String originalSegmentsFileName = sg.generateSegments();
         File originalSegmentsFile = new File(originalSegmentsFileName);

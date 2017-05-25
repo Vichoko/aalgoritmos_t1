@@ -17,13 +17,13 @@ public class first {
     public static void main(String[] args) throws IOException {
         // Variables
         // TODO: Parsing?
-        int m_segmentQuantity = TOTAL_SEGMENTS;
+        TOTAL_SEGMENTS = (int) Math.pow(2, 21);
         Constants.EDistribution m_segmentDistribution = Constants.EDistribution.NORMAL;
         double m_segmentClassBalance = 0.50;
 
 
         System.err.println("Generating segments...");
-        SegmentGenerator sg = new SegmentGenerator(m_segmentQuantity,
+        SegmentGenerator sg = new SegmentGenerator(TOTAL_SEGMENTS,
                 m_segmentDistribution, m_segmentClassBalance);
         String originalSegmentsFileName = sg.generateSegments();
         File originalSegmentsFile = new File(originalSegmentsFileName);

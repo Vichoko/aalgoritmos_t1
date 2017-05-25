@@ -3,7 +3,10 @@ package segment.writer;
 import utils.Constants;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
+
+import static utils.Constants.IO_COUNTER;
 
 public abstract class FileWriter{
     PrintWriter pw;
@@ -13,8 +16,9 @@ public abstract class FileWriter{
     private int maxBytes;
     int bytesCount;
 
-    FileWriter(String pathname) {
+    FileWriter(String pathname) throws IOException{
         this.pathname = pathname;
+        pw = new PrintWriter(new File(pathname));
         sb = new StringBuilder();
         bytesCount = 0;
         this.maxBytes = Constants.B;
@@ -54,6 +58,7 @@ public abstract class FileWriter{
 
     private void writePage(){
         pw.write(sb.toString());
+        IO_COUNTER++;
     }
     double truncateTo3dec(double src){
         return Math.floor(src*1000)/1000;

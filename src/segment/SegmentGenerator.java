@@ -5,6 +5,8 @@ import utils.random.IRandom;
 import utils.random.NormalRandom;
 import utils.random.UniformRandom;
 
+import java.io.IOException;
+
 import static utils.Constants.*;
 
 /**
@@ -42,7 +44,7 @@ public class SegmentGenerator {
      * Creates the vertical and horizontal segments
      * And uses segment.writer to write them in a file
      */
-    public String generateSegments(){
+    public String generateSegments() throws IOException {
         String filename = n+"_a="+a+"_";
         if (distribution==EDistribution.NORMAL) filename += "norm_";
         else filename += "unif_";
@@ -99,7 +101,7 @@ public class SegmentGenerator {
         return filename;
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) throws IOException {
         int exp = Integer.parseInt(args[0]);
         TOTAL_SEGMENTS = (int) Math.pow(2, exp);
         double alpha = Double.parseDouble(args[2]);
